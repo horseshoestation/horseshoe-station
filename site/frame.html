@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Horseshoe Station</title>
+<!-- Full-screen when added to the iPad Home Screen -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="The Glass">
+<meta name="theme-color" content="#000000">
+<style>
+  html,body{margin:0;height:100%;background:#000;overflow:hidden;
+    -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}
+  #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;}
+  .page{position:absolute;max-width:100vw;max-height:100vh;width:auto;height:auto;
+    box-shadow:0 0 60px #0006;opacity:0;transition:opacity 1.2s ease;}
+  .page.show{opacity:1;}
+  #tick{position:fixed;right:10px;bottom:8px;width:7px;height:7px;border-radius:50%;
+    background:#3a3a3a;opacity:0;transition:opacity .4s;}
+  #tick.on{opacity:1;background:#7a9a5a;}
+  #pause{position:fixed;left:12px;bottom:6px;color:#666;font:13px serif;
+    opacity:0;transition:opacity .4s;}
+  #pause.on{opacity:1;}
+</style>
+</head>
+<body>
+  <div id="wrap"><img class="page" id="imgA" alt=""><img class="page" id="imgB" alt=""></div>
+  <div id="tick"></div>
+  <div id="pause">paused — tap to resume</div>
+<script>
+  // ---- settings (override with #dwell=SECONDS in the URL) ----
+  var DWELL = 30;                     // seconds each page is shown
+  var m = location.hash.match(/dwell=(\d+)/);
+  if (m) DWELL = Math.max(5, +m[1]);
+  var RELOAD_EVERY = 10 * 60 * 1000;  // re-fetch images every 10 min (matches the renderer)
+
+  // Every page the renderer can publish; missing ones are skipped automatically.
+  var CANDIDATES = ['warning','smoke','glass','wind','week','glasshouse',
+                    'fire','winter','almanack','season','records'];
+
+  var imgs = [document.getElementById('imgA'), document.getElementById('imgB')];
+  var front = 0, idx = -1, pages = [], paused = false, timer = null;
+  var tick = document.getElementById('tick');
+  var pauseTag = document.getElementById('pause');
+
+  function blink(){ tick.className='on'; setTimeout(function(){tick.className='';},800); }
+
+  // Find which pages exist right now (fire/winter/warning/smoke come and go).
+  function discover(cb){
+    var found = [], pending = CANDIDATES.length, stamp = Date.now();
+    CANDIDATES.forEach(function(name){
+      var probe = new Image();
+      probe.onload  = function(){ found.push(name); if(--pending===0) done(); };
+      probe.onerror = function(){ if(--pending===0) done(); };
+      probe.src = 'page-' + name + '.png?t=' + stamp;
+    });
+    function done(){
+      // keep CANDIDATES order (warnings first, records last)
+      pages = CANDIDATES.filter(function(n){ return found.indexOf(n) !== -1; });
+      if (pages.length === 0) pages = ['glass'];
+      cb();
+    }
+  }
+
+  function show(i){
+    idx = (i + pages.length) % pages.length;
+    var back = 1 - front;
+    var next = imgs[back];
+    var loader = new Image();
+    loader.onload = function(){
+      next.src = loader.src;
+      next.classList.add('show');
+      imgs[front].classList.remove('show');
+      front = back;
+      blink();
+    };
+    loader.src = 'page-' + pages[idx] + '.png?t=' + Date.now();
+  }
+
+  function advance(){ if (!paused) show(idx + 1); }
+
+  function start(){
+    clearInterval(timer);
+    timer = setInterval(advance, DWELL * 1000);
+  }
+
+  // Tap right half = next page, left half = previous, middle = pause/resume.
+  document.addEventListener('click', function(e){
+    var x = e.clientX / window.innerWidth;
+    if (x > 0.66)      { show(idx + 1); start(); }
+    else if (x < 0.33) { show(idx - 1); start(); }
+    else {
+      paused = !paused;
+      pauseTag.className = paused ? 'on' : '';
+      if (!paused) { show(idx + 1); start(); }
+    }
+  });
+
+  // Re-discover pages every 10 min so fresh renders + seasonal pages appear.
+  setInterval(function(){ discover(function(){}); }, RELOAD_EVERY);
+
+  // Refresh when the iPad wakes or you come back to the tab.
+  document.addEventListener('visibilitychange', function(){
+    if (!document.hidden) discover(function(){ show(idx); start(); });
+  });
+
+  discover(function(){ show(0); start(); });
+</script>
+</body>
+</html>
