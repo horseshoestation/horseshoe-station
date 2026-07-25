@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Horseshoe Station — The Ship's Glass · LIVE</title>
+<style>
+@font-face{font-family:'IM Fell English';font-style:normal;font-weight:400;src:url(../fonts/im-fell-english-latin-400-normal.woff2) format('woff2')}
+@font-face{font-family:'IM Fell English';font-style:italic;font-weight:400;src:url(../fonts/im-fell-english-latin-400-italic.woff2) format('woff2')}
+@font-face{font-family:'EB Garamond';font-style:normal;font-weight:400;src:url(../fonts/eb-garamond-latin-400-normal.woff2) format('woff2')}
+@font-face{font-family:'EB Garamond';font-style:italic;font-weight:400;src:url(../fonts/eb-garamond-latin-400-italic.woff2) format('woff2')}
+@font-face{font-family:'EB Garamond';font-style:normal;font-weight:600;src:url(../fonts/eb-garamond-latin-600-normal.woff2) format('woff2')}
+</style>
+<style>
+  /* Ship's Glass live · Spectra-6 palette:
+     ink #1a1a1a · paper #f2efe6 · red #c0392b · blue #2e5f94 · yellow #d4a017 · green #2e7d4f */
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;padding:0;background:#f2efe6;font-family:'EB Garamond',serif}
+  .panel{
+    width:800px;height:480px;background:#f2efe6;
+    
+    position:relative;color:#1a1a1a;overflow:hidden;
+    display:flex;flex-direction:column;padding:1.6% 2%;
+    user-select:none;-webkit-user-select:none;cursor:pointer;
+  }
+  .rulebox{
+    flex:1;display:flex;flex-direction:column;min-height:0;
+    border:1.5px solid #1a1a1a;outline:1px solid #1a1a1a;outline-offset:-5px;
+    padding:1.8% 3% 1.5%;overflow:hidden;
+  }
+  .rulebox.warned{border-color:#c0392b;outline-color:#c0392b}
+  .hdr{text-align:center;position:relative}
+  .eyebrow{font-size:clamp(7px,1.2vw,9.5px);letter-spacing:.42em;color:#2e5f94;font-weight:600;text-transform:uppercase}
+  h1{font-family:'IM Fell English',serif;font-weight:400;font-size:clamp(15px,3vw,24px);letter-spacing:.06em;line-height:1.1;margin-top:.3%}
+  .hdr .sub{font-size:clamp(7.5px,1.35vw,10.5px);letter-spacing:.22em;margin-top:.6%;text-transform:uppercase}
+  .hdr .sub b{color:#c0392b;font-weight:600}
+  .hdr .date{position:absolute;top:2px;right:0;font-size:clamp(7.5px,1.3vw,10px);letter-spacing:.14em;text-align:right;line-height:1.7}
+  .orn{display:flex;align-items:center;gap:10px;margin:1% 0 1.2%}
+  .orn::before,.orn::after{content:"";flex:1;border-top:1px solid #1a1a1a}
+  .orn span{font-size:clamp(8px,1.4vw,11px);color:#c0392b;line-height:1;letter-spacing:.2em}
+  #content{flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+  .foot{
+    display:flex;justify-content:space-between;align-items:baseline;
+    margin-top:1.4%;padding-top:1.3%;border-top:1px solid #1a1a1a;
+    font-size:clamp(6.5px,1.15vw,9px);letter-spacing:.16em;text-transform:uppercase;
+  }
+  .foot .sun b{color:#d4a017}
+  .foot .pages{letter-spacing:.3em}
+  .foot .stat-ok{color:#2e7d4f}.foot .stat-bad{color:#c0392b}
+  /* shared bits */
+  .lbl{font-size:clamp(6.5px,1.15vw,9px);letter-spacing:.3em;color:#2e5f94;font-weight:600;text-transform:uppercase}
+  .lbl .u{color:#c0392b}
+  .bigword{font-family:'IM Fell English',serif;font-size:clamp(26px,5vw,42px);line-height:1;margin-top:2%}
+  .bigword small{font-family:'EB Garamond',serif;font-size:35%}
+  .chip{display:inline-block;margin-top:3%;padding:2px 10px;border:1px solid #1a1a1a;border-radius:999px;
+    font-size:clamp(7px,1.3vw,10px);letter-spacing:.22em;text-transform:uppercase;font-weight:600}
+  .mini{font-size:clamp(7.5px,1.35vw,10.5px);line-height:1.9;margin-top:3%}
+  .mini b{font-weight:600}
+  .rd{color:#c0392b;font-weight:600}.bl{color:#2e5f94;font-weight:600}.gd{color:#8a6a10;font-weight:600}.gn{color:#2e7d4f;font-weight:600}
+  .main3{display:flex;gap:3.4%;flex:1;min-height:0;overflow:hidden}
+  .col{display:flex;flex-direction:column;overflow:hidden;min-width:0}
+  .colrose{align-items:center}
+  .colrose svg{flex:1 1 auto;min-height:0;width:100%}
+  .rose-cap{font-size:clamp(6.5px,1.1vw,8.5px);letter-spacing:.14em;text-align:center;margin-top:1%;line-height:1.6;text-transform:uppercase;flex:0 0 auto}
+  .rose-cap b{color:#c0392b;font-weight:600}
+  .rose-cap i{font-style:normal;font-weight:600}
+  .ledger{margin-top:2%;flex:0 1 auto;min-height:0}
+  .lrow{display:flex;align-items:baseline;font-size:clamp(8px,1.5vw,11.5px);letter-spacing:.04em;padding:1% 0;border-bottom:1px dotted #b7ae97}
+  .lrow .k{white-space:nowrap}
+  .lrow .dots{flex:1;margin:0 6px;border-bottom:1px dotted #b7ae97;transform:translateY(-3px)}
+  .lrow .v{white-space:nowrap;font-weight:600}
+  .lrow .v small{font-weight:400;font-size:85%}
+  .remarks{font-style:italic;font-size:clamp(7.5px,1.35vw,10.5px);line-height:1.5;margin-top:1.5%}
+  .remarks b{font-style:normal;font-weight:600;letter-spacing:.14em;color:#2e5f94;font-size:88%}
+  .glass-val{font-family:'IM Fell English',serif;font-size:clamp(28px,5.6vw,45px);line-height:1;margin-top:3%}
+  .glass-unit{font-size:clamp(7.5px,1.3vw,10px);letter-spacing:.1em;margin-top:2%}
+  .glass-trend{margin-top:4%;font-weight:600;letter-spacing:.14em;font-size:clamp(8px,1.5vw,11.5px);text-transform:uppercase}
+  .glass-trend .arr{font-size:clamp(11px,2vw,16px);vertical-align:-1px}
+  .t-fall{color:#c0392b}.t-rise{color:#2e5f94}.t-steady{color:#8a6a10}
+  .tracebox svg{display:block;width:100%;height:auto}
+  .dscale svg{display:block;width:100%;height:auto}
+  .week{display:flex;flex:1;min-height:0;margin-top:1%}
+  .day{flex:1;display:flex;flex-direction:column;align-items:center;text-align:center;border-left:1px dotted #b7ae97;padding:1% .4% 0;min-width:0}
+  .day:first-child{border-left:none}
+  .day .dn{font-weight:600;letter-spacing:.2em;font-size:clamp(8px,1.5vw,11.5px)}
+  .day.today .dn{color:#c0392b}
+  .day .dt{font-size:clamp(7px,1.2vw,9px);color:#6b6455;letter-spacing:.12em;margin-top:1px}
+  .day svg{width:60%;max-width:44px;height:auto;margin:8% 0 6%}
+  .day .hi{font-family:'IM Fell English',serif;font-size:clamp(13px,2.6vw,21px);line-height:1}
+  .day .lo{font-size:clamp(8px,1.5vw,11.5px);color:#2e5f94;font-weight:600;margin-top:2px}
+  .day .pp{font-size:clamp(7px,1.25vw,9.5px);color:#2e5f94;margin-top:6%}
+  .day .wd{font-size:clamp(6.5px,1.1vw,8.5px);color:#6b6455;letter-spacing:.08em;margin-top:2px}
+  .warncenter{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:0}
+  .stationstrip{border:1px solid #1a1a1a;padding:1.1% 2.4%;display:flex;justify-content:space-between;align-items:baseline;
+    font-size:clamp(6.5px,1.2vw,9.5px);letter-spacing:.16em;text-transform:uppercase}
+  .splash{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+  .splash .s1{font-family:'IM Fell English',serif;font-style:italic;font-size:clamp(14px,2.6vw,21px)}
+  .splash .s2{margin-top:2%;font-size:clamp(8px,1.5vw,11px);letter-spacing:.2em;text-transform:uppercase;color:#2e5f94}
+  .demobadge{position:absolute;top:8px;left:10px;background:#d98f9c;color:#1a1a1a;font-size:10px;letter-spacing:.18em;padding:2px 8px;border-radius:3px;z-index:5;font-weight:600}
+</style>
+</head>
+<body>
+<div class="panel" id="panel">
+  <div class="demobadge" id="demobadge" style="display:none">DEMO &middot; STATION UNREACHABLE</div>
+  <div class="rulebox" id="rulebox">
+    <div class="hdr">
+      <div class="eyebrow">Weather Log &amp; Ship&rsquo;s Glass &middot; LIVE</div>
+      <h1>HORSESHOE STATION</h1>
+      <div class="sub">Nederland, Colorado &mdash; <b>8,373 feet above the sea</b></div>
+      <div class="date" id="hdrdate">&mdash;<br>&mdash;</div>
+    </div>
+    <div class="orn"><span id="orntitle">&#10022;</span></div>
+    <div id="content"><div class="splash"><div class="s1">Reading the flow&hellip;</div><div class="s2" id="splashnote">raising the station on Horseshoe Pl</div></div></div>
+    <div class="foot">
+      <span>Lat 39.969&deg; N &middot; Long 105.495&deg; W</span>
+      <span class="pages" id="dots"></span>
+      <span><span id="statnote" class="stat-ok">&mdash;</span> &nbsp;<span class="sun" id="suntimes"></span></span>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+/* ================= CONFIG ================= */
+var CFG = {
+  apiKey: "4d8b697245f94249b75b8f3a9ebd3afd227a3e76ae6f4eaa9f061979e35fdefc",
+  appKey: "8d5cae1285b948a383887eb8422eccc9a970e7d1cd6e4393966324e23337b082",
+  mac: "34:5F:45:66:8E:40",
+  lat: 39.9693, lon: -105.4951,
+  tz: "America/Denver",
+  pageSeconds: 20,            // auto-advance in browser
+  histCalls: 5                // 5 x 288 records x 2min = ~48h
+};
+/* keys may also arrive in the URL fragment (never sent to any server):
+   ...horseshoe_live.html#apiKey=XXX&appKey=YYY&mac=ZZ:ZZ:...   */
+(function(){
+  try{
+    var h=location.hash.replace(/^#/,"");
+    if(h){
+      h.split("&").forEach(function(kv){
+        var p=kv.split("=");
+        if(p[0]==="apiKey"&&p[1])CFG.apiKey=decodeURIComponent(p[1]);
+        if(p[0]==="appKey"&&p[1])CFG.appKey=decodeURIComponent(p[1]);
+        if(p[0]==="mac"&&p[1])CFG.mac=decodeURIComponent(p[1]);
+      });
+    }
+  }catch(e){}
+})();
+var INK="#1a1a1a", PAPER="#f2efe6", RED="#c0392b", BLUE="#2e5f94", GOLD="#d4a017", GREEN="#2e7d4f", DIM="#6b6455", GRID="#c9c2ae";
+var DIRS=["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+
+/* ================= STATE ================= */
+var S = {
+  cur:null, hist:[],           // AWN: lastData, records oldest->newest
+  nws:null, alerts:[],         // forecast periods, active alerts
+  aqi:null,                    // {us_aqi, pm2_5, pm10}
+  demo:false, lastTurn:null, errors:{}
+};
+
+/* ================= HELPERS ================= */
+function $(id){ return document.getElementById(id); }
+function fmtT(ms,opts){ return new Date(ms).toLocaleString([], Object.assign({timeZone:CFG.tz}, opts)); }
+function dirName(d){ return DIRS[Math.round(d/22.5)%16]; }
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;"); }
+function sleep(ms){ return new Promise(function(r){ setTimeout(r,ms); }); }
+function beaufort(mph){
+  if(mph<1)return["0","calm"];if(mph<4)return["1","light air"];if(mph<8)return["2","light breeze"];
+  if(mph<13)return["3","gentle breeze"];if(mph<19)return["4","moderate"];if(mph<25)return["5","fresh breeze"];
+  if(mph<32)return["6","strong breeze"];if(mph<39)return["7","near gale"];if(mph<47)return["8","gale"];
+  if(mph<55)return["9","strong gale"];if(mph<64)return["10","storm"];return["11","violent storm"];
+}
+/* sun times (NOAA-style approximation) */
+function sunTimes(d){
+  function calc(rise){
+    var lngHour=CFG.lon/15, N=Math.floor((d-new Date(Date.UTC(d.getUTCFullYear(),0,0)))/864e5);
+    var t=N+((rise?6:18)-lngHour)/24, M=(0.9856*t)-3.289;
+    var L=M+(1.916*Math.sin(M*Math.PI/180))+(0.020*Math.sin(2*M*Math.PI/180))+282.634; L=(L+360)%360;
+    var RA=Math.atan(0.91764*Math.tan(L*Math.PI/180))*180/Math.PI; RA=(RA+360)%360;
+    RA=(RA+((Math.floor(L/90)*90)-(Math.floor(RA/90)*90)))/15;
+    var sinDec=0.39782*Math.sin(L*Math.PI/180), cosDec=Math.cos(Math.asin(sinDec));
+    var cosH=(Math.cos(90.833*Math.PI/180)-(sinDec*Math.sin(CFG.lat*Math.PI/180)))/(cosDec*Math.cos(CFG.lat*Math.PI/180));
+    if(cosH>1||cosH<-1)return null;
+    var H=(rise?360-Math.acos(cosH)*180/Math.PI:Math.acos(cosH)*180/Math.PI)/15;
+    var T=H+RA-(0.06571*t)-6.622, UT=(T-lngHour+24)%24;
+    var base=Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate());
+    return base+UT*3600e3;
+  }
+  var rise=calc(true), set=calc(false);
+  if(rise&&set&&set<rise) set+=864e5;   // set falls past the UTC midnight — bump to the same local day
+  return {rise:rise, set:set};
+}
+function moonInfo(now){
+  var age=((now/864e5+2440587.5)-2451550.1)%29.53059; if(age<0)age+=29.53059;
+  var illum=Math.round((1-Math.cos(2*Math.PI*age/29.53059))/2*100);
+  var names=[[1.8,"new moon"],[5.5,"waxing crescent"],[9.2,"first quarter"],[12.9,"waxing gibbous"],[16.6,"full moon"],[20.3,"waning gibbous"],[24.1,"last quarter"],[27.7,"waning crescent"],[29.6,"new moon"]];
+  var name="new moon"; for(var i=0;i<names.length;i++){ if(age<=names[i][0]){ name=names[i][1]; break; } }
+  var toFull=(14.765-age+29.53059)%29.53059;
+  return {age:age,illum:illum,name:name,toFull:Math.round(toFull),waxing:age<14.765};
+}
+
+/* ================= FETCHERS ================= */
+function j(url,opt){
+  var ctl=new AbortController();
+  var tm=setTimeout(function(){ctl.abort();},15000);
+  return fetch(url,Object.assign({signal:ctl.signal},opt||{})).then(function(r){
+    clearTimeout(tm);
+    if(!r.ok)throw new Error(r.status);
+    return r.json();
+  },function(e){ clearTimeout(tm); throw e; });
+}
+function awnBase(){ return "https://rt.ambientweather.net/v1/devices"; }
+function awnQ(){ return "applicationKey="+CFG.appKey+"&apiKey="+CFG.apiKey; }
+
+/* AWN allows ~1 request/second — every call goes through this queue:
+   >=1300ms spacing, and a patient retry with backoff when a 429 slips through. */
+var awnChain=Promise.resolve(), awnLast=0;
+function awnJ(url){
+  var p=awnChain.catch(function(){}).then(async function(){
+    for(var tries=0;;tries++){
+      var wait=Math.max(0, awnLast+1300-Date.now());
+      if(wait) await sleep(wait);
+      awnLast=Date.now();
+      try{ return await j(url); }
+      catch(e){
+        if(String(e.message)==="429" && tries<3){ await sleep(2500*(tries+1)); continue; }
+        throw e;
+      }
+    }
+  });
+  awnChain=p;
+  return p;
+}
+
+async function loadAWN(full){
+  var devs = await awnJ(awnBase()+"?"+awnQ());
+  if(!devs.length) throw new Error("no station");
+  S.cur = devs[0].lastData;
+  S.errors.awn=null;
+  if(S.demo){ S.demo=false; $("demobadge").style.display="none"; }
+  if(full){
+    var recs=[], endDate=null;
+    for(var i=0;i<CFG.histCalls;i++){
+      try{
+        var u=awnBase()+"/"+encodeURIComponent(CFG.mac)+"?"+awnQ()+"&limit=288"+(endDate?("&endDate="+endDate):"");
+        var batch=await awnJ(u);
+        if(!batch.length) break;
+        recs=recs.concat(batch);
+        endDate=batch[batch.length-1].dateutc-60000;
+      }catch(e){ break; /* keep whatever history we already have */ }
+    }
+    if(recs.length>10){ recs.reverse(); S.hist=recs; render(); }
+  }
+}
+async function loadNWS(){
+  try{
+    if(!S.nwsGrid){
+      var p=await j("https://api.weather.gov/points/"+CFG.lat+","+CFG.lon);
+      S.nwsGrid=p.properties.forecast;
+    }
+    var f=await j(S.nwsGrid);
+    S.nws=f.properties.periods;
+    S.errors.nws=null;
+  }catch(e){ S.errors.nws=e.message; }
+  try{
+    var a=await j("https://api.weather.gov/alerts/active?point="+CFG.lat+","+CFG.lon);
+    S.alerts=(a.features||[]).map(function(x){return x.properties;});
+    S.errors.alerts=null;
+  }catch(e){ S.errors.alerts=e.message; }
+}
+async function loadAQI(){
+  try{
+    var a=await j("https://air-quality-api.open-meteo.com/v1/air-quality?latitude="+CFG.lat+"&longitude="+CFG.lon+"&current=us_aqi,pm2_5,pm10&timezone=auto");
+    S.aqi=a.current;
+    S.errors.aqi=null;
+  }catch(e){ S.errors.aqi=e.message; }
+}
+
+/* ================= DEMO FALLBACK ================= */
+function demoData(){
+  var now=Date.now(), recs=[];
+  for(var i=1440;i>=0;i--){
+    var t=now-i*2*60*1000, h=(now-t)/36e5;
+    var rel=+(29.52+0.045*Math.sin(h/24*4*Math.PI+1.1)-0.12*Math.exp(-Math.pow((h-30)/6,2))+0.0025*(48-h)+0.006*Math.sin(h*7.3)).toFixed(3);
+    var gust=Math.max(1,6+7*Math.max(0,Math.sin(h/24*2*Math.PI+.4))+30*Math.exp(-Math.pow((h-31)/3.2,2))+2.5*Math.sin(h*2.7));
+    var solarH=(function(){var lh=(new Date(t)).getUTCHours()-6+(new Date(t)).getUTCMinutes()/60; lh=(lh+24)%24; var x=(lh-12.6)/6.8; return Math.max(0,Math.cos(x*Math.PI/2))*934*(1-0.35*Math.exp(-Math.pow((lh-15)/1.4,2)));})();
+    recs.push({dateutc:t, tempf:61+14*Math.sin(((h%24)/24)*2*Math.PI+3.6), humidity:60, baromrelin:rel,
+      windspeedmph:gust*0.5, windgustmph:gust, winddir:(255+18*Math.sin(h*0.9))%360,
+      solarradiation:solarH, uv:Math.round(solarH/100), hourlyrainin:0, tempinf:71+9*Math.sin(((h%24)/24)*2*Math.PI+3.4), humidityin:45});
+  }
+  S.hist=recs;
+  var last=recs[recs.length-1];
+  S.cur=Object.assign({},last,{feelsLike:last.tempf, dewPoint:48, baromabsin:+(last.baromrelin-7.27).toFixed(3),
+    maxdailygust:17.2, dailyrainin:0.12, weeklyrainin:0.15, monthlyrainin:0.76, yearlyrainin:4.57, tz:CFG.tz});
+  S.demo=true;
+}
+
+/* ================= SVG BUILDERS ================= */
+function polar(cx,cy,r,a){ a=a*Math.PI/180; return [cx+r*Math.sin(a),cy-r*Math.cos(a)]; }
+function roseSVG(size, stacked){
+  var recs=S.hist, cx=120, cy=120;
+  var bins=[]; for(var i=0;i<16;i++) bins.push([0,0,0]);
+  var total=0;
+  recs.forEach(function(p){
+    var spd=p.windspeedmph, dir=p.winddir;
+    if(spd==null||dir==null||spd<1) return;
+    var b=Math.round(dir/22.5)%16, c=spd<10?0:(spd<20?1:2);
+    bins[b][c]++; total++;
+  });
+  var maxT=1; bins.forEach(function(b){ maxT=Math.max(maxT,b[0]+b[1]+b[2]); });
+  var s='<svg viewBox="0 0 240 240" style="'+(size||'')+'">';
+  s+='<circle cx="120" cy="120" r="104" fill="none" stroke="'+INK+'" stroke-width="1.2"/>';
+  s+='<circle cx="120" cy="120" r="99" fill="none" stroke="'+INK+'" stroke-width="0.6"/>';
+  for(var d=0;d<360;d+=15){
+    var p1=polar(cx,cy,99,d),p2=polar(cx,cy,99-(d%45===0?7:4),d);
+    s+='<line x1="'+p1[0]+'" y1="'+p1[1]+'" x2="'+p2[0]+'" y2="'+p2[1]+'" stroke="'+INK+'" stroke-width="'+(d%45===0?1.1:0.55)+'"/>';
+  }
+  [34,68].forEach(function(r){ s+='<circle cx="120" cy="120" r="'+r+'" fill="none" stroke="'+GRID+'" stroke-width="1"/>'; });
+  var R0=8,R1=97,cols=[BLUE,GOLD,RED];
+  bins.forEach(function(b,i){
+    var ang=i*22.5,half=9,acc=0,tot=b[0]+b[1]+b[2];
+    if(!tot)return;
+    for(var c=0;c<3;c++){
+      if(!b[c])continue;
+      var r0=R0+(R1-R0)*(acc/maxT); acc+=b[c];
+      var r1=R0+(R1-R0)*(acc/maxT);
+      var a1=polar(cx,cy,r1,ang-half),a2=polar(cx,cy,r1,ang+half),b2=polar(cx,cy,r0,ang+half),b1=polar(cx,cy,r0,ang-half);
+      s+='<path d="M'+b1[0].toFixed(1)+','+b1[1].toFixed(1)+' L'+a1[0].toFixed(1)+','+a1[1].toFixed(1)+
+        ' A'+r1+','+r1+' 0 0 1 '+a2[0].toFixed(1)+','+a2[1].toFixed(1)+
+        ' L'+b2[0].toFixed(1)+','+b2[1].toFixed(1)+' A'+r0+','+r0+' 0 0 0 '+b1[0].toFixed(1)+','+b1[1].toFixed(1)+
+        ' Z" fill="'+cols[c]+'" fill-opacity=".85" stroke="'+PAPER+'" stroke-width="1"/>';
+    }
+  });
+  var nd=(S.cur&&S.cur.winddir!=null)?S.cur.winddir:0;
+  var tip=polar(cx,cy,102,nd),tail=polar(cx,cy,14,nd+180),wl=polar(cx,cy,4,nd-90),wr=polar(cx,cy,4,nd+90);
+  s+='<path d="M'+tip[0].toFixed(1)+','+tip[1].toFixed(1)+' L'+wl[0].toFixed(1)+','+wl[1].toFixed(1)+' L'+tail[0].toFixed(1)+','+tail[1].toFixed(1)+' L'+wr[0].toFixed(1)+','+wr[1].toFixed(1)+' Z" fill="'+INK+'"/>';
+  s+='<circle cx="120" cy="120" r="3" fill="'+PAPER+'" stroke="'+INK+'" stroke-width="1.2"/>';
+  [["N",0],["E",90],["S",180],["W",270]].forEach(function(t){
+    var p=polar(cx,cy,114,t[1]);
+    s+='<text x="'+p[0]+'" y="'+(p[1]+5)+'" text-anchor="middle" font-size="14" fill="'+INK+'" font-family="IM Fell English,serif">'+t[0]+'</text>';
+  });
+  return s+'</svg>';
+}
+function antiqueRoseSVG(){
+  /* the Glass page's engraved compass: split-point star, graduated ring, quiet blue petals */
+  var cx=120, cy=120, s='<svg viewBox="0 0 240 240">';
+  s+='<circle cx="120" cy="120" r="104" fill="none" stroke="'+INK+'" stroke-width="1.2"/>';
+  s+='<circle cx="120" cy="120" r="99" fill="none" stroke="'+INK+'" stroke-width="0.6"/>';
+  for(var d=0; d<360; d+=5){
+    var len=(d%45===0)?0:(d%15===0?6:3.4);
+    if(!len) continue;
+    var p1=polar(cx,cy,99,d), p2=polar(cx,cy,99-len,d);
+    s+='<line x1="'+p1[0].toFixed(1)+'" y1="'+p1[1].toFixed(1)+'" x2="'+p2[0].toFixed(1)+'" y2="'+p2[1].toFixed(1)+'" stroke="'+INK+'" stroke-width="'+(d%15===0?1:0.55)+'"/>';
+  }
+  /* blue petals: share of time per direction */
+  var counts=[]; for(var i=0;i<16;i++) counts.push(0);
+  S.hist.forEach(function(p){ if(p.windspeedmph!=null&&p.winddir!=null&&p.windspeedmph>=1) counts[Math.round(p.winddir/22.5)%16]++; });
+  var maxN=Math.max.apply(null,counts)||1;
+  counts.forEach(function(n,i){
+    if(!n) return;
+    var ang=i*22.5, half=8.5, r=40+(96-40)*(n/maxN);
+    var a1=polar(cx,cy,r,ang-half), a2=polar(cx,cy,r,ang+half);
+    s+='<path d="M'+cx+','+cy+' L'+a1[0].toFixed(1)+','+a1[1].toFixed(1)+' A'+r+','+r+' 0 0 1 '+a2[0].toFixed(1)+','+a2[1].toFixed(1)+' Z" fill="'+BLUE+'" fill-opacity="0.42" stroke="'+BLUE+'" stroke-width="0.8" stroke-opacity="0.75"/>';
+  });
+  function tri(pts,fill,stroke){
+    s+='<path d="M'+pts.map(function(p){return p[0].toFixed(1)+','+p[1].toFixed(1);}).join(' L')+' Z" fill="'+fill+'"'+(stroke?' stroke="'+INK+'" stroke-width="0.8"':'')+'/>';
+  }
+  for(var i=1;i<16;i+=2){ /* minor points */
+    var ang=i*22.5;
+    tri([polar(cx,cy,56,ang),polar(cx,cy,7,ang-90),polar(cx,cy,7,ang+90)],PAPER,true);
+  }
+  [45,135,225,315].forEach(function(ang){ /* intercardinal: red/white split */
+    var tip=polar(cx,cy,74,ang), l=polar(cx,cy,10,ang-90), r3=polar(cx,cy,10,ang+90), c=[cx,cy];
+    tri([tip,l,c],RED); tri([tip,r3,c],PAPER,true);
+    s+='<path d="M'+tip[0].toFixed(1)+','+tip[1].toFixed(1)+' L'+l[0].toFixed(1)+','+l[1].toFixed(1)+'" stroke="'+INK+'" stroke-width="0.8" fill="none"/>';
+  });
+  [0,90,180,270].forEach(function(ang){ /* cardinal: black/white split */
+    var tip=polar(cx,cy,92,ang), l=polar(cx,cy,12,ang-90), r4=polar(cx,cy,12,ang+90), c=[cx,cy];
+    tri([tip,l,c],INK); tri([tip,r4,c],PAPER,true);
+  });
+  s+='<circle cx="120" cy="120" r="5" fill="'+PAPER+'" stroke="'+INK+'" stroke-width="1.2"/>';
+  var nd=(S.cur&&S.cur.winddir!=null)?S.cur.winddir:0;
+  var tip=polar(cx,cy,101,nd), tail=polar(cx,cy,16,nd+180), wl=polar(cx,cy,5,nd-90), wr=polar(cx,cy,5,nd+90);
+  tri([tip,wl,tail,wr],RED);
+  s+='<circle cx="120" cy="120" r="2.6" fill="'+RED+'"/>';
+  [["N",0],["E",90],["S",180],["W",270]].forEach(function(t){
+    var p=polar(cx,cy,115,t[1]);
+    s+='<text x="'+p[0].toFixed(1)+'" y="'+(p[1]+5).toFixed(1)+'" text-anchor="middle" font-size="15" fill="'+INK+'" font-family="IM Fell English,serif">'+t[0]+'</text>';
+  });
+  return s+'</svg>';
+}
+function seriesPath(recs, key, x0,x1,y0,y1, vmin,vmax, N){
+  N=N||110;
+  var step=Math.max(1,Math.floor(recs.length/N)), pts=[];
+  for(var i=0;i<recs.length;i+=step){
+    var v=recs[i][key]; if(v==null) continue;
+    var x=x0+(i/(recs.length-1))*(x1-x0);
+    var y=y1-((v-vmin)/(vmax-vmin))*(y1-y0);
+    pts.push(x.toFixed(1)+","+y.toFixed(1));
+  }
+  var last=recs[recs.length-1][key];
+  if(last!=null) pts.push(x1.toFixed(1)+","+(y1-((last-vmin)/(vmax-vmin))*(y1-y0)).toFixed(1));
+  return pts;
+}
+function glassTraceSVG(){
+  var recs=S.hist.filter(function(r){return r.baromrelin!=null;});
+  if(recs.length<4) return '<div class="remarks">the glass trace is filling&hellip;</div>';
+  var vals=recs.map(function(r){return r.baromrelin;});
+  var lo=Math.min.apply(null,vals), hi=Math.max.apply(null,vals);
+  var pad=Math.max(0.03,(hi-lo)*0.15); lo-=pad; hi+=pad;
+  var pts=seriesPath(recs,"baromrelin",0,720,22,72,lo,hi);
+  var endY=pts[pts.length-1].split(",")[1];
+  var hours=(recs[recs.length-1].dateutc-recs[0].dateutc)/36e5;
+  var midX=720*(1-24/hours);
+  var s='<svg viewBox="0 0 720 92" preserveAspectRatio="none">';
+  s+='<defs><pattern id="ht" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="5" stroke="'+INK+'" stroke-width="0.7" opacity="0.28"/></pattern></defs>';
+  s+='<text x="2" y="12" font-size="10.5" letter-spacing="3" fill="'+BLUE+'" font-weight="600" font-family="EB Garamond,serif">THE GLASS &#183; '+Math.round(hours)+' HOURS</text>';
+  s+='<text x="718" y="12" font-size="10" letter-spacing="1.5" fill="'+INK+'" text-anchor="end" font-family="EB Garamond,serif">LOW '+Math.min.apply(null,vals).toFixed(2)+' &#183; HIGH '+Math.max.apply(null,vals).toFixed(2)+'</text>';
+  s+='<line x1="0" y1="47" x2="720" y2="47" stroke="'+GRID+'" stroke-width="1"/>';
+  if(hours>26&&midX>0) s+='<line x1="'+midX.toFixed(0)+'" y1="18" x2="'+midX.toFixed(0)+'" y2="72" stroke="'+INK+'" stroke-width="1" stroke-dasharray="2 4" opacity=".55"/><text x="'+midX.toFixed(0)+'" y="86" font-size="10" letter-spacing="1.5" fill="'+INK+'" text-anchor="middle" font-family="EB Garamond,serif">&minus;24 H</text>';
+  s+='<path fill="url(#ht)" stroke="none" d="M'+pts.join(" L")+' L720,72 L0,72 Z"/>';
+  s+='<path fill="none" stroke="'+INK+'" stroke-width="2" vector-effect="non-scaling-stroke" d="M'+pts.join(" L")+'"/>';
+  s+='<circle cx="720" cy="'+endY+'" r="3.4" fill="'+RED+'"/>';
+  s+='<line x1="0" y1="72" x2="720" y2="72" stroke="'+INK+'" stroke-width="1.5"/>';
+  s+='<text x="2" y="86" font-size="10" letter-spacing="1.5" fill="'+INK+'" font-family="EB Garamond,serif">&minus;'+Math.round(hours)+' H</text>';
+  s+='<text x="718" y="86" font-size="10" letter-spacing="1.5" fill="'+INK+'" text-anchor="end" font-family="EB Garamond,serif">NOW</text>';
+  return s+'</svg>';
+}
+function dutchScaleSVG(rel){
+  // sea-level inHg mapped across the old glass words
+  var min=29.0,max=30.2;
+  var x=Math.max(6,Math.min(714,(rel-min)/(max-min)*720));
+  var seg=(rel<29.25)?0:(rel<29.45)?1:(rel<29.7)?2:(rel<29.95)?3:4;
+  var labs=["STORM","REGEN","VERANDERLYK","MOOI WEER","BESTENDIG"];
+  var s='<svg viewBox="0 0 720 30">';
+  s+='<line x1="0" y1="20" x2="720" y2="20" stroke="'+INK+'" stroke-width="1.2"/>';
+  for(var i=0;i<=5;i++){ var tx=i*144; s+='<line x1="'+tx+'" y1="16" x2="'+tx+'" y2="24" stroke="'+INK+'" stroke-width="1"/>'; }
+  labs.forEach(function(L,i){
+    s+='<text x="'+(72+i*144)+'" y="11" text-anchor="middle" font-family="EB Garamond,serif" font-size="10.5" letter-spacing="2.5" font-weight="600" fill="'+(i===seg?RED:INK)+'">'+L+'</text>';
+  });
+  s+='<path d="M'+x.toFixed(0)+',20 L'+(x+6).toFixed(0)+',27 L'+(x-6).toFixed(0)+',27 Z" fill="'+RED+'"/>';
+  return s+'</svg>';
+}
+function gustTraceSVG(){
+  var recs=S.hist.filter(function(r){return r.windgustmph!=null;});
+  if(recs.length<4) return '';
+  var g=recs.map(function(r){return r.windgustmph;});
+  var top=Math.max(15,Math.ceil(Math.max.apply(null,g)/5)*5+3);
+  var gp=seriesPath(recs,"windgustmph",0,720,20,72,0,top);
+  var sp=seriesPath(recs,"windspeedmph",0,720,20,72,0,top);
+  var maxG=Math.max.apply(null,g), maxI=g.indexOf(maxG);
+  var mx=(maxI/(g.length-1))*720, my=72-(maxG/top)*52;
+  var hours=(recs[recs.length-1].dateutc-recs[0].dateutc)/36e5;
+  var s='<svg viewBox="0 0 720 92" preserveAspectRatio="none">';
+  s+='<text x="2" y="12" font-size="10.5" letter-spacing="3" fill="'+BLUE+'" font-weight="600" font-family="EB Garamond,serif">GUSTS &#183; '+Math.round(hours)+' HOURS</text>';
+  s+='<text x="718" y="12" font-size="10" letter-spacing="1.5" fill="'+INK+'" text-anchor="end" font-family="EB Garamond,serif">INK = GUST &#183; BLUE = SUSTAINED</text>';
+  s+='<line x1="0" y1="46" x2="720" y2="46" stroke="'+GRID+'" stroke-width="1"/>';
+  s+='<path fill="none" stroke="'+INK+'" stroke-width="1.8" vector-effect="non-scaling-stroke" d="M'+gp.join(" L")+'"/>';
+  s+='<path fill="none" stroke="'+BLUE+'" stroke-width="1.6" vector-effect="non-scaling-stroke" d="M'+sp.join(" L")+'"/>';
+  s+='<circle cx="'+mx.toFixed(0)+'" cy="'+my.toFixed(0)+'" r="3" fill="'+RED+'"/>';
+  s+='<text x="'+mx.toFixed(0)+'" y="'+(my-6).toFixed(0)+'" font-size="9.5" letter-spacing="1" fill="'+RED+'" text-anchor="middle" font-family="EB Garamond,serif" font-weight="600">'+Math.round(maxG)+'</text>';
+  s+='<line x1="0" y1="72" x2="720" y2="72" stroke="'+INK+'" stroke-width="1.5"/>';
+  s+='<text x="2" y="86" font-size="10" letter-spacing="1.5" fill="'+INK+'" font-family="EB Garamond,serif">&minus;'+Math.round(hours)+' H</text>';
+  s+='<text x="718" y="86" font-size="10" letter-spacing="1.5" fill="'+INK+'" text-anchor="end" font-family="EB Garamond,serif">NOW</text>';
+  return s+'</svg>';
+}
+function glyphSVG(kind){
+  if(kind==='sun') return '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" fill="none" stroke="'+INK+'" stroke-width="1.6"/><g stroke="'+GOLD+'" stroke-width="1.8"><line x1="12" y1="1" x2="12" y2="4.5"/><line x1="12" y1="19.5" x2="12" y2="23"/><line x1="1" y1="12" x2="4.5" y2="12"/><line x1="19.5" y1="12" x2="23" y2="12"/><line x1="4.2" y1="4.2" x2="6.7" y2="6.7"/><line x1="17.3" y1="17.3" x2="19.8" y2="19.8"/><line x1="4.2" y1="19.8" x2="6.7" y2="17.3"/><line x1="17.3" y1="6.7" x2="19.8" y2="4.2"/></g></svg>';
+  if(kind==='psun') return '<svg viewBox="0 0 24 24"><circle cx="8" cy="9" r="4" fill="none" stroke="'+INK+'" stroke-width="1.5"/><g stroke="'+GOLD+'" stroke-width="1.6"><line x1="8" y1="1.5" x2="8" y2="3.5"/><line x1="1.5" y1="9" x2="3.5" y2="9"/><line x1="3" y1="3.8" x2="4.6" y2="5.4"/></g><path d="M7,19 a4,4 0 0 1 1,-7.9 a5,5 0 0 1 9.4,1.5 a3.2,3.2 0 0 1 -0.6,6.4 Z" fill="'+PAPER+'" stroke="'+INK+'" stroke-width="1.6"/></svg>';
+  if(kind==='cloud') return '<svg viewBox="0 0 24 24"><path d="M5,18 a4.4,4.4 0 0 1 1,-8.6 a5.6,5.6 0 0 1 10.6,1.6 a3.6,3.6 0 0 1 -0.7,7 Z" fill="none" stroke="'+INK+'" stroke-width="1.6"/></svg>';
+  if(kind==='rain') return '<svg viewBox="0 0 24 24"><path d="M5,15 a4,4 0 0 1 1,-7.8 a5.2,5.2 0 0 1 9.8,1.5 a3.3,3.3 0 0 1 -0.6,6.3 Z" fill="none" stroke="'+INK+'" stroke-width="1.6"/><g stroke="'+BLUE+'" stroke-width="1.7"><line x1="8" y1="17.5" x2="6.7" y2="21.5"/><line x1="12.5" y1="17.5" x2="11.2" y2="21.5"/><line x1="17" y1="17.5" x2="15.7" y2="21.5"/></g></svg>';
+  if(kind==='storm') return '<svg viewBox="0 0 24 24"><path d="M5,14.5 a4,4 0 0 1 1,-7.6 a5.2,5.2 0 0 1 9.8,1.5 a3.3,3.3 0 0 1 -0.6,6.1 Z" fill="none" stroke="'+INK+'" stroke-width="1.6"/><path d="M13.5,14 L9.5,19.5 L12.3,19.5 L10.8,23.5 L15.6,17.6 L12.8,17.6 L14.6,14 Z" fill="'+RED+'"/></svg>';
+  return '<svg viewBox="0 0 24 24"><g stroke="'+BLUE+'" stroke-width="1.6"><line x1="12" y1="3" x2="12" y2="21"/><line x1="4.2" y1="7.5" x2="19.8" y2="16.5"/><line x1="19.8" y1="7.5" x2="4.2" y2="16.5"/><line x1="12" y1="3" x2="9.8" y2="5.2"/><line x1="12" y1="3" x2="14.2" y2="5.2"/><line x1="12" y1="21" x2="9.8" y2="18.8"/><line x1="12" y1="21" x2="14.2" y2="18.8"/></g></svg>';
+}
+function glyphFor(txt){
+  txt=(txt||"").toLowerCase();
+  if(/thunder|t-storm|tstm/.test(txt))return 'storm';
+  if(/snow|flurr|blizzard|wintry/.test(txt))return 'snow';
+  if(/rain|shower|drizzle/.test(txt))return 'rain';
+  if(/partly|mostly sunny|mostly clear|scattered/.test(txt))return 'psun';
+  if(/cloud|overcast|fog/.test(txt))return 'cloud';
+  return 'sun';
+}
+
+/* ================= PAGES ================= */
+function trendOf(){
+  var recs=S.hist.filter(function(r){return r.baromrelin!=null;});
+  if(recs.length<10) return {cls:"t-steady",arr:"&#8594;",word:"Steady",verdict:"The glass is still filling its memory."};
+  var last=recs[recs.length-1].baromrelin;
+  var i3=recs.length-1; var t3=recs[recs.length-1].dateutc-3*36e5;
+  while(i3>0&&recs[i3].dateutc>t3)i3--;
+  var d3=last-recs[i3].baromrelin;
+  if(d3>=0.02)return {cls:"t-rise",arr:"&#8599;",word:"Rising"+(d3>=0.06?" fast":""),verdict:"Drier air moving in — a good sign for tomorrow."};
+  if(d3<=-0.02)return {cls:"t-fall",arr:"&#8600;",word:"Falling"+(d3<=-0.06?" fast":" slowly"),verdict:d3<=-0.06?"A disturbance approaches — wind and weather within a day.":"Clouds or afternoon storms becoming more likely."};
+  return {cls:"t-steady",arr:"&#8594;",word:"Steady",verdict:"No organized system nearby — watch the afternoon build-ups."};
+}
+function pageGlass(){
+  var c=S.cur, t=trendOf();
+  var maxg=0,maxt=null;
+  S.hist.forEach(function(r){ if(r.windgustmph!=null&&r.windgustmph>maxg){maxg=r.windgustmph;maxt=r.dateutc;} });
+  var html='<div class="main3">'
+    +'<div class="col" style="width:28%">'
+      +'<div class="lbl">The Glass</div>'
+      +'<div class="glass-val">'+c.baromrelin.toFixed(2)+'</div>'
+      +'<div class="glass-unit">inches of mercury &middot; abs '+(c.baromabsin!=null?c.baromabsin.toFixed(2):"&mdash;")+'</div>'
+      +'<div class="glass-trend '+t.cls+'"><span class="arr">'+t.arr+'</span> '+t.word+'</div>'
+      +'<div class="remarks">'+t.verdict+'</div>'
+    +'</div>'
+    +'<div class="col colrose" style="width:33%">'+antiqueRoseSVG()
+      +'<div class="rose-cap"><b>'+prevailing()+' prevails</b> &middot; <i style="color:'+BLUE+'">blue petals</i> = share of 48&nbsp;h</div>'
+    +'</div>'
+    +'<div class="col" style="flex:1">'
+      +'<div class="lbl">Deck Log &middot; '+fmtT(Date.now(),{hour:"numeric",minute:"2-digit"})+'</div>'
+      +'<div class="ledger">'
+      +lrow("Temperature", c.tempf.toFixed(1)+" &deg;F")
+      +lrow("Feels like", Math.round(c.feelsLike)+"&deg;")
+      +lrow("Humidity", Math.round(c.humidity)+'<small>%</small> &middot; dew '+Math.round(c.dewPoint)+"&deg;")
+      +lrow("Wind", dirName(c.winddir)+" "+Math.round(c.windspeedmph)+' <small>g</small> <span class="rd">'+Math.round(c.windgustmph)+'</span>')
+      +lrow("Max gust today", '<span class="rd">'+Math.round(c.maxdailygust||maxg)+'</span> <small>mph</small>')
+      +lrow("Rain, this day", (c.dailyrainin!=null?c.dailyrainin.toFixed(2):"0.00")+' <small>in</small>')
+      +'</div>'
+    +'</div></div>'
+    +'<div class="dscale">'+dutchScaleSVG(c.baromrelin)+'</div>'
+    +'<div class="tracebox" style="margin-top:.6%">'+glassTraceSVG()+'</div>';
+  return html;
+}
+function lrow(k,v){ return '<div class="lrow"><span class="k">'+k+'</span><span class="dots"></span><span class="v">'+v+'</span></div>'; }
+function prevailing(){
+  var counts={},best=0,name="&mdash;";
+  S.hist.forEach(function(r){ if(r.winddir!=null&&r.windspeedmph>=1){ var n=dirName(r.winddir); counts[n]=(counts[n]||0)+1; if(counts[n]>best){best=counts[n];name=n;} } });
+  return name;
+}
+function pageWind(){
+  var c=S.cur, bf=beaufort(c.windspeedmph);
+  var maxg=0,maxt=null,sum=0,n=0,gusty=0;
+  S.hist.forEach(function(r){
+    if(r.windgustmph!=null){ if(r.windgustmph>maxg){maxg=r.windgustmph;maxt=r.dateutc;} if(r.windgustmph>=25)gusty++; }
+    if(r.windspeedmph!=null){ sum+=r.windspeedmph; n++; }
+  });
+  var hrs=(gusty*2/60).toFixed(1);
+  return '<div class="main3">'
+    +'<div class="col" style="width:27%">'
+      +'<div class="lbl">The Wind</div>'
+      +'<div class="bigword">'+c.windspeedmph.toFixed(1)+'<small> mph</small></div>'
+      +'<div class="chip">'+bf[1]+'</div>'
+      +'<div class="mini">gusting <b class="rd">'+c.windgustmph.toFixed(1)+'</b> mph<br>from <b>'+dirName(c.winddir)+'</b> ('+Math.round(c.winddir)+'&deg;)<br>10-min avg <b>'+(c.windspdmph_avg10m!=null?c.windspdmph_avg10m.toFixed(1):"&mdash;")+'</b> mph</div>'
+    +'</div>'
+    +'<div class="col colrose" style="width:40%">'+roseSVG()
+      +'<div class="rose-cap">petal = share of 48 h &middot; stacked: <i style="color:'+BLUE+'">&#9632;</i>&lt;10 <i style="color:'+GOLD+'">&#9632;</i>10&ndash;20 <i style="color:'+RED+'">&#9632;</i>20+ mph</div>'
+    +'</div>'
+    +'<div class="col" style="flex:1">'
+      +'<div class="lbl">The Wind Ledger</div>'
+      +'<div class="ledger">'
+      +lrow("Max gust, 48 h",'<span class="rd">'+Math.round(maxg)+'</span> <small>'+(maxt?fmtT(maxt,{weekday:"short",hour:"numeric"}):"")+'</small>')
+      +lrow("Prevailing",'<b>'+prevailing()+'</b>')
+      +lrow("Avg sustained",(n?(sum/n):0).toFixed(1)+' <small>mph</small>')
+      +lrow("Hours gusting 25+",hrs+' <small>h</small>')
+      +lrow("Beaufort now",bf[0]+' &middot; '+bf[1])
+      +'</div>'
+    +'</div></div>'
+    +'<div class="tracebox" style="margin-top:1%">'+gustTraceSVG()+'</div>';
+}
+function pageWeek(){
+  if(!S.nws) return '<div class="splash"><div class="s1">Raising NWS Boulder&hellip;</div></div>';
+  var days={},order=[];
+  S.nws.forEach(function(p){
+    var d=p.startTime.slice(0,10);
+    if(!days[d]){days[d]={};order.push(d);}
+    if(p.isDaytime)days[d].day=p; else days[d].night=p;
+  });
+  var cols='';
+  order.slice(0,7).forEach(function(d,i){
+    var dd=days[d], day=dd.day, night=dd.night;
+    var hi=day?day.temperature:(night?"&mdash;":"");
+    var lo=night?night.temperature:"&mdash;";
+    var src=day||night;
+    var pop=(src.probabilityOfPrecipitation&&src.probabilityOfPrecipitation.value)||0;
+    var wd=(src.windDirection||"")+" "+String(src.windSpeed||"").replace(" mph","").split(" to ").pop();
+    var dt=new Date(d+"T12:00:00");
+    cols+='<div class="day'+(i===0?' today':'')+'">'
+      +'<div class="dn">'+dt.toLocaleDateString([],{weekday:"short"}).toUpperCase()+'</div>'
+      +'<div class="dt">'+dt.toLocaleDateString([],{month:"short",day:"numeric"}).toUpperCase()+'</div>'
+      +glyphSVG(glyphFor(src.shortForecast))
+      +'<div class="hi">'+hi+'&deg;</div><div class="lo">'+lo+'&deg;</div>'
+      +'<div class="pp">&#9730; '+pop+'%</div>'
+      +'<div class="wd">'+wd+'</div>'
+      +'</div>';
+  });
+  var outlook=(S.nws[0]&&S.nws[0].detailedForecast)||"";
+  if(outlook.length>140)outlook=outlook.slice(0,137)+"&hellip;";
+  return '<div class="week">'+cols+'</div>'
+    +'<div class="remarks" style="margin-top:1%"><b>Outlook</b> &mdash; '+esc(outlook)+' <span style="color:'+DIM+'">(NWS Boulder)</span></div>';
+}
+function todayRecs(){
+  var now=new Date(), midLocal=new Date(now.toLocaleDateString("en-US",{timeZone:CFG.tz})+" 00:00:00");
+  var mid=midLocal.getTime();
+  return S.hist.filter(function(r){return r.dateutc>=mid;});
+}
+function pageGlasshouse(){
+  var c=S.cur;
+  var tr=todayRecs().filter(function(r){return r.solarradiation!=null;});
+  var maxUV=0; todayRecs().forEach(function(r){ if(r.uv!=null&&r.uv>maxUV)maxUV=r.uv; });
+  if(c.uv>maxUV)maxUV=c.uv;
+  var kwh=0; tr.forEach(function(r){ kwh+=r.solarradiation*120/3.6e6; });
+  var dli=(kwh*3.6*2.04).toFixed(0);
+  var st=sunTimes(new Date());
+  var curve='';
+  if(tr.length>3){
+    var maxS=Math.max(400,Math.max.apply(null,tr.map(function(r){return r.solarradiation;})));
+    var x0=10,x1=290;
+    var rise=st.rise||tr[0].dateutc, set=st.set||tr[tr.length-1].dateutc;
+    var pts=[];
+    var step=Math.max(1,Math.floor(tr.length/90));
+    for(var i=0;i<tr.length;i+=step){
+      var frac=(tr[i].dateutc-rise)/(set-rise);
+      if(frac<0||frac>1.02)continue;
+      var x=x0+frac*(x1-x0), y=120-(tr[i].solarradiation/maxS)*95;
+      pts.push(x.toFixed(1)+","+y.toFixed(1));
+    }
+    var peak=Math.max.apply(null,tr.map(function(r){return r.solarradiation;}));
+    var peakR=tr.filter(function(r){return r.solarradiation===peak;})[0];
+    var px=x0+((peakR.dateutc-rise)/(set-rise))*(x1-x0), py=120-(peak/maxS)*95;
+    curve='<svg viewBox="0 0 300 150" style="width:100%;height:auto;margin-top:2%">'
+      +'<defs><pattern id="gh" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="5" stroke="'+GOLD+'" stroke-width="1.6" opacity=".8"/></pattern></defs>'
+      +[[800,"FULL ALPINE SUN &#183; 800"],[500,"STRONG &#183; 500"],[200,"OVERCAST &#183; 200"]].map(function(b){
+          if(b[0]>maxS)return '';
+          var y=120-(b[0]/maxS)*95;
+          return '<line x1="10" y1="'+y.toFixed(0)+'" x2="290" y2="'+y.toFixed(0)+'" stroke="'+GRID+'" stroke-width="1" stroke-dasharray="3 3"/><text x="290" y="'+(y-3).toFixed(0)+'" text-anchor="end" font-family="EB Garamond,serif" font-size="8" fill="'+DIM+'" letter-spacing="1">'+b[1]+'</text>';
+        }).join('')
+      +(pts.length?'<path d="M'+pts[0].split(",")[0]+',120 L'+pts.join(" L")+' L'+pts[pts.length-1].split(",")[0]+',120 Z" fill="url(#gh)" stroke="'+INK+'" stroke-width="1.6"/>':'')
+      +'<circle cx="'+px.toFixed(0)+'" cy="'+py.toFixed(0)+'" r="2.8" fill="'+RED+'"/>'
+      +'<text x="'+Math.min(240,Math.max(60,px)).toFixed(0)+'" y="'+Math.max(10,py-8).toFixed(0)+'" text-anchor="middle" font-family="EB Garamond,serif" font-size="9" font-weight="600" fill="'+RED+'" letter-spacing="1">PEAK '+Math.round(peak)+'</text>'
+      +'<line x1="10" y1="120" x2="290" y2="120" stroke="'+INK+'" stroke-width="1.4"/>'
+      +'<text x="10" y="132" font-family="EB Garamond,serif" font-size="8.5" letter-spacing="1">&#9728; '+(st.rise?fmtT(st.rise,{hour:"numeric",minute:"2-digit"}):"")+'</text>'
+      +'<text x="290" y="132" text-anchor="end" font-family="EB Garamond,serif" font-size="8.5" letter-spacing="1">'+(st.set?fmtT(st.set,{hour:"numeric",minute:"2-digit"}):"")+' &#9728;</text>'
+      +'<text x="150" y="132" text-anchor="middle" font-family="EB Garamond,serif" font-size="8.5" fill="'+DIM+'" letter-spacing="1">W/M&sup2; TODAY</text>'
+      +'</svg>';
+  } else curve='<div class="remarks">the day&rsquo;s light is still gathering&hellip;</div>';
+  var delta=(c.tempinf-c.tempf);
+  var burnMin=maxUV>=11?10:maxUV>=8?15:maxUV>=6?25:maxUV>=3?45:60;
+  var uvx=Math.min(196,Math.max(4, (maxUV/12)*196));
+  var nowx=Math.min(196,Math.max(4,(c.uv/12)*196));
+  return '<div class="main3">'
+    +'<div class="col" style="flex:0 0 27%">'
+      +'<div class="lbl">The Sunroom</div>'
+      +'<div class="bigword">'+c.tempinf.toFixed(1)+'<small>&nbsp;&deg;F</small></div>'
+      +'<div class="chip" style="border-color:'+GREEN+';color:'+GREEN+'">'+(delta>=0?"+":"")+delta.toFixed(1)+'&deg; vs outdoors</div>'
+      +'<div class="ledger" style="margin-top:4%">'
+      +lrow("Humidity, in",Math.round(c.humidityin)+'<small>%</small>')
+      +lrow("Outdoors",c.tempf.toFixed(1)+'&deg; &middot; '+Math.round(c.humidity)+'<small>%</small>')
+      +lrow("Dew point, in",(c.dewPointin!=null?Math.round(c.dewPointin)+"&deg;":"&mdash;"))
+      +'</div>'
+      +'<div class="remarks">'+(c.tempinf>85?"Getting hot under the glass — crack a vent.":(c.tempinf<40?"Frost risk in the glasshouse — mind the heater.":"The plants are comfortable."))+'</div>'
+    +'</div>'
+    +'<div class="col" style="flex:1"><div class="lbl">Today&rsquo;s Light</div>'+curve
+      +'<div class="remarks"><b>The harvest</b> &mdash; '+kwh.toFixed(1)+' kWh/m&sup2; so far; light for growing: '+dli+' DLI. Tomatoes ask 20&ndash;30.</div>'
+    +'</div>'
+    +'<div class="col" style="flex:0 0 28%">'
+      +'<div class="lbl">The Burning Index</div>'
+      +'<svg viewBox="0 0 200 64" style="width:100%;height:auto;margin-top:4%">'
+      +'<rect x="2" y="18" width="34" height="16" fill="'+GREEN+'" fill-opacity=".6"/>'
+      +'<rect x="36" y="18" width="50" height="16" fill="'+GOLD+'" fill-opacity=".5"/>'
+      +'<rect x="86" y="18" width="34" height="16" fill="'+GOLD+'"/>'
+      +'<rect x="120" y="18" width="50" height="16" fill="'+RED+'" fill-opacity=".55"/>'
+      +'<rect x="170" y="18" width="28" height="16" fill="'+RED+'"/>'
+      +'<rect x="2" y="18" width="196" height="16" fill="none" stroke="'+INK+'" stroke-width="1.4"/>'
+      +'<g font-family="EB Garamond,serif" font-size="8" fill="'+INK+'" letter-spacing=".5" text-anchor="middle">'
+      +'<text x="19" y="45">LOW</text><text x="61" y="45">MODERATE</text><text x="103" y="45">HIGH</text><text x="145" y="45">V. HIGH</text><text x="184" y="45" fill="'+RED+'" font-weight="600">11+</text></g>'
+      +'<path d="M'+uvx.toFixed(0)+',16 L'+(uvx-5).toFixed(0)+',7 L'+(uvx+5).toFixed(0)+',7 Z" fill="'+RED+'"/>'
+      +'<text x="'+uvx.toFixed(0)+'" y="60" text-anchor="middle" font-family="EB Garamond,serif" font-size="8.5" font-weight="600" fill="'+RED+'" letter-spacing="1">PEAK '+maxUV+'</text>'
+      +'<path d="M'+nowx.toFixed(0)+',16 L'+(nowx-5).toFixed(0)+',7 L'+(nowx+5).toFixed(0)+',7 Z" fill="'+INK+'" opacity="'+(Math.abs(nowx-uvx)<8?0:1)+'"/>'
+      +'</svg>'
+      +'<div class="mini" style="line-height:2.1">now <b>UV '+c.uv+'</b> &middot; solar <b>'+Math.round(c.solarradiation)+'</b> W/m&sup2;<br>fair skin burns in <b>~'+burnMin+' min</b> at peak<br>this height adds <b class="gd">+25%</b> sun</div>'
+    +'</div></div>';
+}
+function pageFire(){
+  var c=S.cur, tr=todayRecs();
+  var rhMin=100, tMax=-99, gMax=0;
+  tr.forEach(function(r){
+    if(r.humidity!=null&&r.humidity<rhMin)rhMin=r.humidity;
+    if(r.tempf!=null&&r.tempf>tMax)tMax=r.tempf;
+    if(r.windgustmph!=null&&r.windgustmph>gMax)gMax=r.windgustmph;
+  });
+  if(rhMin>99)rhMin=c.humidity; if(tMax<-90)tMax=c.tempf; gMax=Math.max(gMax,c.maxdailygust||0);
+  var daysSinceRain=null;
+  if(c.lastRain){ daysSinceRain=Math.floor((Date.now()-new Date(c.lastRain).getTime())/864e5); }
+  /* rough station-side danger estimate (the frame version adds the official rating) */
+  var score=0;
+  score+=(rhMin<15?3:rhMin<25?2:rhMin<35?1:0);
+  score+=(gMax>=40?2:gMax>=25?1:0);
+  score+=(tMax>=85?1:tMax>=75?0.5:0);
+  if(daysSinceRain!=null)score+=(daysSinceRain>7?1.5:daysSinceRain>3?0.5:0);
+  var lvl=score>=6?4:score>=4.5?3:score>=3?2:score>=1.5?1:0;
+  var words=["LOW","MODERATE","HIGH","VERY HIGH","EXTREME"];
+  var mx=[22,62,102,142,182][lvl];
+  var redflag=S.alerts.filter(function(a){return /red flag/i.test(a.event||"");})[0];
+  var tomorrow="&mdash;";
+  if(S.nws){
+    var tomo=S.nws.filter(function(p){return p.isDaytime;})[1];
+    if(tomo)tomorrow=(tomo.windDirection||"")+" "+String(tomo.windSpeed||"").replace(" mph","");
+  }
+  var wants=[
+    [rhMin<25,'dry air &lt;25%','RH low today '+Math.round(rhMin)+'%'],
+    [gMax>=25,'wind 25+','top gust today '+Math.round(gMax)],
+    [tMax>=80,'heat 80&deg;+','high today '+Math.round(tMax)+'&deg;']
+  ];
+  var awake=wants.filter(function(w){return w[0];}).length;
+  return '<div class="main3">'
+    +'<div class="col" style="flex:0 0 28%">'
+      +'<div class="lbl">Fire Danger <span class="u">&middot; est. at the station</span></div>'
+      +'<div class="bigword" style="color:'+(lvl>=2?RED:INK)+'">'+words[lvl]+'</div>'
+      +'<svg viewBox="0 0 200 46" style="width:100%;height:auto;margin-top:5%">'
+      +'<rect x="2" y="14" width="40" height="14" fill="'+GREEN+'" fill-opacity=".6"/><rect x="42" y="14" width="40" height="14" fill="'+GOLD+'" fill-opacity=".5"/><rect x="82" y="14" width="40" height="14" fill="'+GOLD+'"/><rect x="122" y="14" width="40" height="14" fill="'+RED+'" fill-opacity=".55"/><rect x="162" y="14" width="36" height="14" fill="'+RED+'"/>'
+      +'<rect x="2" y="14" width="196" height="14" fill="none" stroke="'+INK+'" stroke-width="1.4"/>'
+      +'<path d="M'+mx+',12 L'+(mx-5)+',4 L'+(mx+5)+',4 Z" fill="'+INK+'"/>'
+      +'<g font-family="EB Garamond,serif" font-size="7.5" fill="'+INK+'" text-anchor="middle" letter-spacing=".5"><text x="22" y="40">LOW</text><text x="62" y="40">MODER.</text><text x="102" y="40">HIGH</text><text x="142" y="40">V. HIGH</text><text x="180" y="40" fill="'+RED+'" font-weight="600" letter-spacing="0">EXTREME</text></g>'
+      +'</svg>'
+      +(redflag
+        ?'<div class="chip" style="border-color:'+RED+';color:'+RED+';margin-top:6%">&#9888; Red Flag Warning</div>'
+        :'<div class="chip" style="border-color:'+GREEN+';color:'+GREEN+';margin-top:6%">No red flag posted</div>')
+      +(S.fire&&S.fire.stage
+        ?'<div class="chip" style="border-color:'+RED+';color:'+RED+';margin-top:2%">'+esc(S.fire.stage)+' &middot; Boulder Co.</div>'
+        :'<div class="remarks" style="color:'+DIM+'">No county ban posted.</div>')
+    +'</div>'
+    +'<div class="col" style="flex:1">'
+      +'<div class="lbl">The Tinder Ledger</div>'
+      +'<div class="ledger">'
+      +lrow("Humidity, today&rsquo;s low",'<span class="'+(rhMin<25?'rd':'')+'">'+Math.round(rhMin)+'</span><small>%</small>')
+      +lrow("Humidity, now",Math.round(c.humidity)+'<small>%</small>')
+      +lrow("Wind now",dirName(c.winddir)+' '+Math.round(c.windspeedmph)+' <small>g</small> '+Math.round(c.windgustmph))
+      +lrow("Top gust today",'<span class="'+(gMax>=25?'rd':'')+'">'+Math.round(gMax)+'</span> <small>mph</small>')
+      +lrow("Tomorrow&rsquo;s wind",tomorrow)
+      +lrow("Last rain",daysSinceRain==null?"&mdash;":(daysSinceRain===0?"today":daysSinceRain+' <small>day'+(daysSinceRain===1?"":"s")+' ago</small>'))
+      +'</div>'
+    +'</div>'
+    +'<div class="col" style="flex:0 0 27%">'
+      +'<div class="lbl">What Fire Wants</div>'
+      +'<div class="mini" style="line-height:2.4;margin-top:4%">'
+      +wants.map(function(w){
+          return (w[0]?'<b class="rd">&#9632;</b>':'<span style="color:'+GREEN+'">&#9633;</span>')+'&nbsp; '+w[1]+'<br><span style="color:'+DIM+';font-size:88%">&nbsp;&nbsp;&nbsp;'+w[2]+'</span><br>';
+        }).join('')
+      +'</div>'
+      +'<div class="remarks">'+(awake===0?"All three asleep — a kind day.":awake===1?"One of three awake — stay aware.":awake===2?"Two of three awake — an ill-tempered day.":"All three awake — a dangerous day on the Peak-to-Peak.")+'</div>'
+    +'</div></div>';
+}
+function pageAlmanack(){
+  var c=S.cur, st=sunTimes(new Date()), m=moonInfo(Date.now());
+  var dayLen="";
+  if(st.rise&&st.set){ var mins=Math.round((st.set-st.rise)/6e4); dayLen=Math.floor(mins/60)+" h "+(mins%60)+" m"; }
+  var lastR=c.lastRain?fmtT(new Date(c.lastRain).getTime(),{month:"short",day:"numeric",hour:"numeric"}):"&mdash;";
+  var ph=m.illum/100, rt=(40*Math.abs(1-2*ph)).toFixed(1);
+  var dark;
+  if(m.waxing){ /* dark on the left; terminator hugs left when gibbous */
+    dark='M50,10 A40,40 0 0 0 50,90 A'+rt+',40 0 0 '+(ph<0.5?0:1)+' 50,10 Z';
+  } else {      /* dark on the right; terminator hugs right when gibbous */
+    dark='M50,10 A40,40 0 0 1 50,90 A'+rt+',40 0 0 '+(ph<0.5?1:0)+' 50,10 Z';
+  }
+  var moonSvg='<circle cx="50" cy="50" r="40" fill="'+PAPER+'" stroke="'+INK+'" stroke-width="2"/><path d="'+dark+'" fill="'+INK+'"/>';
+  return '<div class="main3">'
+    +'<div class="col" style="flex:1">'
+      +'<div class="lbl">Rain &middot; the tally</div>'
+      +'<div class="ledger">'
+      +lrow("This day",(c.dailyrainin||0).toFixed(2)+' <small>in</small>')
+      +lrow("This week",(c.weeklyrainin||0).toFixed(2)+' <small>in</small>')
+      +lrow("This month",(c.monthlyrainin||0).toFixed(2)+' <small>in</small>')
+      +lrow("This year",(c.yearlyrainin||0).toFixed(2)+' <small>in</small>')
+      +lrow("Last rain",'<small>'+lastR+'</small>')
+      +'</div>'
+      +'<div class="remarks">The bucket reads liquid only &mdash; winter&rsquo;s snow goes untallied.</div>'
+    +'</div>'
+    +'<div class="col" style="flex:1;border-left:1px dotted #b7ae97;padding-left:4%">'
+      +'<div class="lbl">Sky &middot; this hour</div>'
+      +'<div class="ledger">'
+      +lrow("Outdoors",c.tempf.toFixed(1)+'&deg; &middot; '+Math.round(c.humidity)+'<small>%</small>')
+      +lrow("Sunroom",c.tempinf.toFixed(1)+'&deg; &middot; '+Math.round(c.humidityin)+'<small>%</small>')
+      +lrow("Dew point",Math.round(c.dewPoint)+' &deg;F')
+      +lrow("Solar",Math.round(c.solarradiation)+' <small>W/m&sup2;</small>')
+      +lrow("UV index",String(c.uv))
+      +'</div>'
+      +'<div class="remarks">Day&rsquo;s light: '+dayLen+' on the peaks.</div>'
+    +'</div>'
+    +'<div class="col" style="flex:0 0 27%;border-left:1px dotted #b7ae97;padding-left:4%;align-items:center;text-align:center">'
+      +'<div class="lbl">The Heavens</div>'
+      +'<svg viewBox="0 0 100 100" style="width:44%;max-width:86px;height:auto;margin:4% 0">'+moonSvg+'</svg>'
+      +'<div class="mini"><b style="text-transform:capitalize">'+m.name+'</b> &middot; '+m.illum+'%<br>full moon in <b class="gd">'+m.toFull+' days</b><br>&#9728; rise '+(st.rise?fmtT(st.rise,{hour:"numeric",minute:"2-digit"}):"")+' &middot; set '+(st.set?fmtT(st.set,{hour:"numeric",minute:"2-digit"}):"")+'</div>'
+    +'</div></div>';
+}
+function pageSmoke(){
+  var a=S.aqi||{us_aqi:null,pm2_5:null,pm10:null};
+  var v=a.us_aqi, cat=v==null?"&mdash;":v<=50?"Good":v<=100?"Moderate":v<=150?"Unhealthy for some":v<=200?"Unhealthy":v<=300?"Very unhealthy":"Hazardous";
+  var mx=v==null?4:Math.min(196,Math.max(4,(v/330)*196));
+  return '<div class="main3">'
+    +'<div class="col" style="flex:0 0 30%">'
+      +'<div class="lbl">The Air &middot; AQI</div>'
+      +'<div class="bigword">'+(v==null?"&mdash;":Math.round(v))+'</div>'
+      +'<div class="chip" style="border-color:'+GOLD+';color:'+(v>100?RED:'#8a6a10')+'">'+cat+'</div>'
+      +'<svg viewBox="0 0 200 42" style="width:100%;height:auto;margin-top:6%">'
+      +'<rect x="2" y="10" width="33" height="13" fill="'+GREEN+'" fill-opacity=".6"/><rect x="35" y="10" width="33" height="13" fill="'+GOLD+'" fill-opacity=".5"/><rect x="68" y="10" width="33" height="13" fill="'+GOLD+'"/><rect x="101" y="10" width="33" height="13" fill="'+RED+'" fill-opacity=".55"/><rect x="134" y="10" width="64" height="13" fill="'+RED+'"/>'
+      +'<rect x="2" y="10" width="196" height="13" fill="none" stroke="'+INK+'" stroke-width="1.4"/>'
+      +'<line x1="61" y1="6" x2="61" y2="27" stroke="'+RED+'" stroke-width="1.4" stroke-dasharray="3 2"/>'
+      +'<path d="M'+mx.toFixed(0)+',8 L'+(mx-5).toFixed(0)+',1 L'+(mx+5).toFixed(0)+',1 Z" fill="'+INK+'"/>'
+      +'<g font-family="EB Garamond,serif" font-size="7.5" fill="'+DIM+'" text-anchor="middle" letter-spacing=".5"><text x="18" y="35">50</text><text x="51" y="35">100</text><text x="84" y="35">150</text><text x="117" y="35">200</text><text x="166" y="35">300+</text></g>'
+      +'</svg>'
+    +'</div>'
+    +'<div class="col" style="flex:1">'
+      +'<div class="lbl">The Particulars</div>'
+      +'<div class="ledger">'
+      +lrow("Fine smoke, PM&#8322;.&#8325;",(a.pm2_5!=null?a.pm2_5.toFixed(0):"&mdash;")+' <small>&micro;g/m&sup3;</small>')
+      +lrow("Dust, PM&#8321;&#8320;",(a.pm10!=null?a.pm10.toFixed(0):"&mdash;")+' <small>&micro;g/m&sup3;</small>')
+      +lrow("Source",'<small>Open-Meteo &middot; CAMS</small>')
+      +'</div>'
+    +'</div>'
+    +'<div class="col" style="flex:0 0 32%">'
+      +'<div class="lbl">The View West</div>'
+      +'<svg viewBox="0 0 200 74" style="width:100%;height:auto;margin-top:3%">'
+      +'<path d="M0,60 L30,38 L52,50 L84,24 L116,46 L146,30 L172,44 L200,36" fill="none" stroke="'+BLUE+'" stroke-width="1.6" stroke-opacity=".8"/>'
+      +'<g stroke="'+DIM+'" stroke-width="1.1" stroke-dasharray="10 6" opacity="'+(v>100?0.9:0.4)+'"><line x1="10" y1="52" x2="190" y2="52"/><line x1="24" y1="58" x2="176" y2="58"/><line x1="6" y1="64" x2="194" y2="64"/></g>'
+      +'</svg>'
+      +'<div class="remarks">'+(v==null?"No air reading just now.":v<=50?"Clear as a bell — the Divide in full detail.":v<=100?"A faint film; fine for anything.":"Smoke on the west wind — easy day, windows closed.")+'</div>'
+    +'</div></div>';
+}
+function pageWarning(alert){
+  var c=S.cur;
+  var exp=alert.expires?fmtT(new Date(alert.expires).getTime(),{weekday:"short",hour:"numeric",minute:"2-digit"}):"";
+  var desc=(alert.description||"").replace(/\n/g," ").slice(0,150);
+  return '<div class="warncenter">'
+    +'<svg viewBox="0 0 40 56" style="width:4.6%;min-width:22px;height:auto"><path d="M26,2 L6,32 L17,32 L11,54 L34,24 L21,24 L30,2 Z" fill="'+RED+'"/></svg>'
+    +'<div style="font-family:\'IM Fell English\',serif;font-size:clamp(17px,3.4vw,27px);line-height:1.12;color:'+RED+';margin-top:1%">'+esc(alert.event||"Weather Warning").toUpperCase()+'</div>'
+    +'<div class="lbl" style="margin-top:.8%;color:'+INK+'">'+esc(alert.senderName||"NWS")+' &middot; until '+exp+'</div>'
+    +'<div class="remarks" style="max-width:78%;text-align:center;margin-top:1.6%">'+esc(desc)+'&hellip;</div>'
+    +'</div>'
+    +'<div class="stationstrip">'
+    +'<span style="color:'+BLUE+';font-weight:600">Meanwhile, the station</span>'
+    +'<span><b>'+c.tempf.toFixed(1)+'&deg;F</b></span>'
+    +'<span>wind <b>'+dirName(c.winddir)+' '+Math.round(c.windspeedmph)+'</b> g <b class="rd">'+Math.round(c.windgustmph)+'</b></span>'
+    +'<span>rain <b>'+(c.dailyrainin||0).toFixed(2)+'</b> in</span>'
+    +'<span>glass <b>'+c.baromrelin.toFixed(2)+'</b></span>'
+    +'</div>';
+}
+
+
+/* ============ LOGBOOK PAGES (cloud edition) ============ */
+function lbEntries(){
+  var keys=Object.keys(S.logbook||{}).sort();
+  return keys.map(function(k){ var e=S.logbook[k]; e.date=k; return e; });
+}
+function youngLog(msg){
+  return '<div class="splash"><div class="s1">'+msg+'</div><div class="s2">the log grows a line each day it keeps</div></div>';
+}
+function pageSeason(){
+  var es=lbEntries().slice(-30);
+  if(es.length<5) return youngLog("The Season&rsquo;s Log is "+es.length+" day"+(es.length===1?"":"s")+" old.");
+  var n=es.length, W=450;
+  var tmin=Math.min.apply(null,es.map(function(e){return e.lo;}))-5;
+  var tmax=Math.max.apply(null,es.map(function(e){return e.hi;}))+5;
+  function Yt(v){ return 164-(v-tmin)*(148/(tmax-tmin)); }
+  var gmaxAll=Math.max.apply(null,es.map(function(e){return e.gust;}));
+  var gtop=Math.max(45,gmaxAll+8);
+  function Yg(v){ return 164-v*(148/gtop); }
+  var bw=Math.min(10,(W-20)/n*0.5), stepx=(W-24)/Math.max(1,n-1);
+  var tb='',gb='';
+  var hotI=0,coldI=0,gustI=0;
+  es.forEach(function(e,i){ if(e.hi>es[hotI].hi)hotI=i; if(e.lo<es[coldI].lo)coldI=i; if(e.gust>es[gustI].gust)gustI=i; });
+  es.forEach(function(e,i){
+    var x=12+i*stepx;
+    tb+='<rect x="'+(x-bw/2).toFixed(1)+'" y="'+Yt(e.hi).toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+(Yt(e.lo)-Yt(e.hi)).toFixed(1)+'" fill="#1a1a1a" rx="2"/>';
+    var col=e.gust>=40?"#c0392b":"#2e5f94";
+    gb+='<line x1="'+x.toFixed(1)+'" y1="164" x2="'+x.toFixed(1)+'" y2="'+Yg(e.gust).toFixed(1)+'" stroke="'+col+'" stroke-width="2.4"/><circle cx="'+x.toFixed(1)+'" cy="'+Yg(e.gust).toFixed(1)+'" r="2.6" fill="'+col+'"/>';
+  });
+  var rainSum=0,over80=0,under40=0,gale=0,dry=0,bestDry=0;
+  es.forEach(function(e){ rainSum+=(e.rain||0); if(e.hi>=80)over80++; if(e.lo<40)under40++; if(e.gust>=40)gale++;
+    if((e.rain||0)<0.01){dry++;bestDry=Math.max(bestDry,dry);}else dry=0; });
+  function axis(vals,Y,unit){
+    return vals.map(function(v){
+      return '<line x1="10" y1="'+Y(v).toFixed(0)+'" x2="436" y2="'+Y(v).toFixed(0)+'" stroke="#c9c2ae" stroke-width="1" stroke-dasharray="3 3"/><text x="448" y="'+(Y(v)+3).toFixed(0)+'" text-anchor="end" font-family="EB Garamond,serif" font-size="9.5" fill="#6b6455" letter-spacing="1">'+v+unit+'</text>';
+    }).join('');
+  }
+  var d0=es[0].date.slice(5).replace("-","/"), d1=es[es.length-1].date.slice(5).replace("-","/");
+  return '<div class="main3" style="gap:4%">'
+    +'<div class="col" style="flex:1"><div class="lbl">Outdoor Temperature &middot; '+n+' Days</div>'
+    +'<svg viewBox="0 0 450 182" style="width:100%;height:auto;margin-top:2%">'
+    +axis([Math.round(tmax-10),Math.round((tmax+tmin)/2),Math.round(tmin+10)],Yt,"&deg;")+tb
+    +'<circle cx="'+(12+hotI*stepx).toFixed(1)+'" cy="'+Yt(es[hotI].hi).toFixed(1)+'" r="3.2" fill="#c0392b"/>'
+    +'<text x="'+(12+hotI*stepx).toFixed(1)+'" y="'+(Yt(es[hotI].hi)-7).toFixed(1)+'" text-anchor="middle" font-family="EB Garamond,serif" font-size="10" font-weight="600" fill="#c0392b">'+Math.round(es[hotI].hi)+'&deg;</text>'
+    +'<circle cx="'+(12+coldI*stepx).toFixed(1)+'" cy="'+Yt(es[coldI].lo).toFixed(1)+'" r="3.2" fill="#2e5f94"/>'
+    +'<text x="'+(12+coldI*stepx).toFixed(1)+'" y="'+(Yt(es[coldI].lo)+14).toFixed(1)+'" text-anchor="middle" font-family="EB Garamond,serif" font-size="10" font-weight="600" fill="#2e5f94">'+Math.round(es[coldI].lo)+'&deg;</text>'
+    +'<line x1="10" y1="166" x2="436" y2="166" stroke="#1a1a1a" stroke-width="1.4"/>'
+    +'<text x="10" y="180" font-family="EB Garamond,serif" font-size="9.5" letter-spacing="1.5">'+d0+'</text><text x="436" y="180" text-anchor="end" font-family="EB Garamond,serif" font-size="9.5" letter-spacing="1.5">'+d1+'</text>'
+    +'</svg></div>'
+    +'<div class="col" style="flex:1"><div class="lbl">The Wind Log &middot; Daily Top Gust</div>'
+    +'<svg viewBox="0 0 450 182" style="width:100%;height:auto;margin-top:2%">'
+    +axis([40,20],Yg," ")+gb
+    +'<text x="'+(12+gustI*stepx).toFixed(1)+'" y="'+(Yg(es[gustI].gust)-8).toFixed(1)+'" text-anchor="middle" font-family="EB Garamond,serif" font-size="10" font-weight="600" fill="#c0392b">'+Math.round(es[gustI].gust)+'</text>'
+    +'<line x1="10" y1="166" x2="436" y2="166" stroke="#1a1a1a" stroke-width="1.4"/>'
+    +'<text x="10" y="180" font-family="EB Garamond,serif" font-size="9.5" letter-spacing="1.5">'+d0+'</text><text x="436" y="180" text-anchor="end" font-family="EB Garamond,serif" font-size="9.5" letter-spacing="1.5">'+d1+'</text>'
+    +'</svg></div>'
+    +'</div>'
+    +'<div style="display:flex;justify-content:space-between;border-top:1px solid #1a1a1a;margin-top:1.6%;padding-top:1.4%;font-size:clamp(6.5px,1.15vw,9px);letter-spacing:.14em;text-transform:uppercase">'
+    +'<span>Rain <b>'+rainSum.toFixed(2)+'</b> in</span>'
+    +'<span style="border-left:1px dotted #b7ae97;padding-left:2.4%">days over 80&deg; <b>'+over80+'</b></span>'
+    +'<span style="border-left:1px dotted #b7ae97;padding-left:2.4%">nights under 40&deg; <b class="bl">'+under40+'</b></span>'
+    +'<span style="border-left:1px dotted #b7ae97;padding-left:2.4%">gale days <b class="rd">'+gale+'</b></span>'
+    +'<span style="border-left:1px dotted #b7ae97;padding-left:2.4%">dry spell <b>'+bestDry+'</b> d</span>'
+    +'</div>';
+}
+function pageRecords(){
+  var es=lbEntries();
+  if(es.length<5) return youngLog("The Log of Records is "+es.length+" day"+(es.length===1?"":"s")+" old.");
+  function best(fn,cmp){ var b=es[0]; es.forEach(function(e){ if(cmp(fn(e),fn(b)))b=e; }); return b; }
+  var hot=best(function(e){return e.hi;},function(a,b){return a>b;});
+  var cold=best(function(e){return e.lo;},function(a,b){return a<b;});
+  var gust=best(function(e){return e.gust;},function(a,b){return a>b;});
+  var wet=best(function(e){return e.rain||0;},function(a,b){return a>b;});
+  function d(e){ var p=e.date.split("-"); return p[1]+"/"+p[2]+" &rsquo;"+p[0].slice(2); }
+  var today=es[es.length-1];
+  var lastYearKey=(function(){ var t=new Date(DATA.now); t.setFullYear(t.getFullYear()-1);
+    return t.toISOString().slice(0,10); })();
+  var ly=S.logbook[lastYearKey];
+  return '<div class="main3" style="gap:3.6%">'
+    +'<div class="col" style="flex:1.25"><div class="lbl">Station Records &middot; '+es.length+' days kept</div>'
+    +'<div class="ledger">'
+    +lrow("Hottest",'<span class="rd">'+Math.round(hot.hi)+'&deg;</span> <small>'+d(hot)+'</small>')
+    +lrow("Coldest",'<span class="bl">'+Math.round(cold.lo)+'&deg;</span> <small>'+d(cold)+'</small>')
+    +lrow("Fiercest gust",'<span class="rd">'+Math.round(gust.gust)+'</span> <small>mph &middot; '+d(gust)+'</small>')
+    +lrow("Wettest day",(wet.rain||0).toFixed(2)+' <small>in &middot; '+d(wet)+'</small>')
+    +'</div>'
+    +'<div class="remarks">The log stands. It only ever grows.</div></div>'
+    +'<div class="col" style="flex:1"><div class="lbl">This Day, Last Year</div>'
+    +(ly
+      ?'<div class="ledger">'+lrow("Then",Math.round(ly.hi)+'&deg; <span class="bl">/ '+Math.round(ly.lo)+'&deg;</span>')
+        +lrow("Today",Math.round(today.hi)+'&deg; <span class="bl">/ '+Math.round(today.lo)+'&deg;</span>')
+        +lrow("Gust, then",Math.round(ly.gust)+' <small>mph</small>')+'</div>'
+      :'<div class="remarks" style="margin-top:6%">The log hasn&rsquo;t seen this day before &mdash; next year it will remember.</div>')
+    +'</div>'
+    +'<div class="col" style="flex:0 0 26%"><div class="lbl">In Danger Today</div>'
+    +'<div class="mini" style="line-height:2.2;margin-top:4%">'
+    +(today.hi>=hot.hi-2?'today&rsquo;s high <b class="rd">'+Math.round(today.hi)+'&deg;</b> courts the record<br>':'')
+    +(today.gust>=gust.gust-5?'today&rsquo;s gust <b class="rd">'+Math.round(today.gust)+'</b> courts the record<br>':'')
+    +'</div>'
+    +'<div class="remarks">'+((today.hi>=hot.hi-2||today.gust>=gust.gust-5)?"Watch the evening entry.":"No records threatened today.")+'</div>'
+    +'</div></div>';
+}
+function pageWinter(){
+  var c=S.cur;
+  var snowText="&mdash;", snowWhen="";
+  if(S.nws){
+    for(var i=0;i<S.nws.length;i++){
+      var p=S.nws[i];
+      var mm=/(\d+)\s*to\s*(\d+)\s*inches/i.exec(p.detailedForecast||"");
+      if(mm&&/snow/i.test(p.detailedForecast)){ snowText=mm[1]+"&ndash;"+mm[2]+"<small> in</small>"; snowWhen=p.name; break; }
+      if(/snow/i.test(p.shortForecast||"")&&snowText==="&mdash;"){ snowText="snow"; snowWhen=p.name; }
+    }
+  }
+  var freeze=0,total=0;
+  S.hist.forEach(function(r){ if(r.tempf!=null){ total++; if(r.tempf<=32)freeze++; } });
+  var fh=total?Math.round(freeze/total*24):0;
+  var margin=c.tempinf-32;
+  return '<div class="main3" style="gap:3.4%">'
+    +'<div class="col" style="flex:0 0 26%"><div class="lbl">The Cold</div>'
+    +'<div class="bigword">'+c.tempf.toFixed(1)+'<small>&nbsp;&deg;F</small></div>'
+    +'<div class="chip" style="border-color:#c0392b;color:#c0392b">feels '+Math.round(c.feelsLike)+'&deg;</div>'
+    +'<div class="ledger" style="margin-top:4%">'
+    +lrow("Wind",dirName(c.winddir)+' '+Math.round(c.windspeedmph)+' <small>g</small> <span class="rd">'+Math.round(c.windgustmph)+'</span>')
+    +lrow("Freeze hours","~"+fh+' <small>of 24</small>')
+    +lrow("Humidity",Math.round(c.humidity)+'<small>%</small>')
+    +'</div></div>'
+    +'<div class="col" style="flex:1"><div class="lbl">Snow Watch &middot; NWS</div>'
+    +'<div style="display:flex;align-items:center;gap:6%;margin-top:3%">'
+    +glyphSVG("snow").replace('<svg ','<svg style="width:17%;max-width:52px;flex:0 0 auto" ')
+    +'<div><div class="bigword" style="font-size:clamp(20px,3.8vw,30px)">'+snowText+'</div>'
+    +'<div class="mini" style="margin-top:1%">'+(snowWhen?esc(snowWhen):"no snow in the forecast")+'</div></div></div>'
+    +'<div class="remarks" style="margin-top:4%">The bucket sleeps through winter &mdash; snow is kept by forecast and the ruler on the deck rail.</div>'
+    +'</div>'
+    +'<div class="col" style="flex:0 0 27%"><div class="lbl">Glasshouse Guard</div>'
+    +'<div class="ledger">'
+    +lrow("Sunroom",c.tempinf.toFixed(1)+' &deg;F')
+    +lrow("Humidity",Math.round(c.humidityin)+'<small>%</small>')
+    +lrow("Frost margin",'<span class="'+(margin<10?'rd':'gn')+'">+'+Math.round(margin)+'&deg;</span>')
+    +'</div>'
+    +'<div class="remarks">'+(margin<5?"Danger close — check the heater now.":margin<12?"Heater earning its keep tonight.":"The plants sleep warm.")+'</div>'
+    +'</div></div>';
+}
+/* ================= CYCLE & RENDER ================= */
+var PAGES=[
+  {id:"glass", title:"THE GLASS", fn:pageGlass},
+  {id:"wind", title:"THE WIND", fn:pageWind},
+  {id:"week", title:"THE WEEK AHEAD", fn:pageWeek},
+  {id:"glasshouse", title:"THE GLASSHOUSE", fn:pageGlasshouse},
+  {id:"almanack", title:"THE ALMANACK", fn:pageAlmanack}
+];
+var idx=0, holdUntil=0;
+function fullRegistry(){
+  return {
+    glass:{title:"THE GLASS",fn:pageGlass},
+    wind:{title:"THE WIND",fn:pageWind},
+    week:{title:"THE WEEK AHEAD",fn:pageWeek},
+    glasshouse:{title:"THE GLASSHOUSE",fn:pageGlasshouse},
+    fire:{title:"THE FIRE WATCH",fn:pageFire},
+    almanack:{title:"THE ALMANACK",fn:pageAlmanack},
+    smoke:{title:"THE SMOKE WATCH",fn:pageSmoke},
+    season:{title:"THE SEASON&rsquo;S LOG",fn:pageSeason},
+    records:{title:"THE LOG OF RECORDS",fn:pageRecords},
+    winter:{title:"THE WINTER GLASS",fn:pageWinter}
+  };
+}
+function renderForced(){
+  var warn=activeWarning();
+  $("hdrdate").innerHTML=fmtT(DATA.now,{weekday:"short",day:"numeric",month:"short"}).toUpperCase()+"<br>"+fmtT(DATA.now,{hour:"numeric",minute:"2-digit"});
+  var st=sunTimes(new Date(DATA.now));
+  $("suntimes").innerHTML='<b>&#9728;</b> '+(st.rise?fmtT(st.rise,{hour:"numeric",minute:"2-digit"}):"")+' &middot; '+(st.set?fmtT(st.set,{hour:"numeric",minute:"2-digit"}):"");
+  $("statnote").textContent="TURNED "+fmtT(DATA.now,{hour:"numeric",minute:"2-digit"});
+  $("statnote").className="stat-ok";
+  if(warn && FORCED_PAGE!=="__nowarn__"){
+    $("rulebox").classList.add("warned");
+    $("orntitle").innerHTML="&#9888;&nbsp;&nbsp;THE WARNING&nbsp;&nbsp;&#9888;";
+    $("content").innerHTML=pageWarning(warn);
+    $("dots").innerHTML="&#9888;";
+    return;
+  }
+  var reg=fullRegistry(), id=FORCED_PAGE&&reg[FORCED_PAGE]?FORCED_PAGE:"glass";
+  $("orntitle").innerHTML="&#10022;&nbsp;&nbsp;"+reg[id].title+"&nbsp;&nbsp;&#10022;";
+  $("content").innerHTML=reg[id].fn();
+  var order=DATA.cycle||["glass"], dots="";
+  order.forEach(function(p){ dots+=(p===id?"&#9679; ":"&#9675; "); });
+  $("dots").innerHTML=dots.trim();
+}
+function activePages(){
+  var p=PAGES.slice();
+  var month=new Date().getMonth();          // 0=Jan
+  var redflag=S.alerts.some(function(a){return /red flag/i.test(a.event||"");});
+  if((month>=4&&month<=9)||redflag)         // fire season May–Oct, or any red flag
+    p.splice(4,0,{id:"fire",title:"THE FIRE WATCH",fn:pageFire});
+  if(S.aqi&&S.aqi.us_aqi>100) p.push({id:"smoke",title:"THE SMOKE WATCH",fn:pageSmoke});
+  return p;
+}
+function activeWarning(){
+  var sev={"Extreme":2,"Severe":1};
+  var w=S.alerts.filter(function(a){ return sev[a.severity]!=null && /warning/i.test(a.event||""); });
+  w.sort(function(a,b){ return (sev[b.severity]||0)-(sev[a.severity]||0); });
+  return w[0]||null;
+}
+function render(){
+  if(!S.cur) return;
+  var rb=$("rulebox"), warn=activeWarning();
+  $("hdrdate").innerHTML=fmtT(Date.now(),{weekday:"short",day:"numeric",month:"short"}).toUpperCase()+"<br>"+fmtT(Date.now(),{hour:"numeric",minute:"2-digit"});
+  var st=sunTimes(new Date());
+  $("suntimes").innerHTML='<b>&#9728;</b> '+(st.rise?fmtT(st.rise,{hour:"numeric",minute:"2-digit"}):"")+' &middot; '+(st.set?fmtT(st.set,{hour:"numeric",minute:"2-digit"}):"");
+  var sn=$("statnote");
+  if(S.demo){ sn.textContent="DEMO"; sn.className="stat-bad"; }
+  else if(S.errors.awn){ sn.textContent="STATION LINK LOST"; sn.className="stat-bad"; }
+  else { sn.textContent="LIVE · "+fmtT(S.lastTurn||Date.now(),{hour:"numeric",minute:"2-digit"}); sn.className="stat-ok"; }
+  if(warn){
+    rb.classList.add("warned");
+    $("orntitle").innerHTML="&#9888;&nbsp;&nbsp;THE WARNING&nbsp;&nbsp;&#9888;";
+    $("content").innerHTML=pageWarning(warn);
+    $("dots").innerHTML="&#9888;";
+    return;
+  }
+  rb.classList.remove("warned");
+  var pages=activePages(); idx=idx%pages.length;
+  var pg=pages[idx];
+  $("orntitle").innerHTML="&#10022;&nbsp;&nbsp;"+pg.title+"&nbsp;&nbsp;&#10022;";
+  try{ $("content").innerHTML=pg.fn(); }
+  catch(e){ $("content").innerHTML='<div class="splash"><div class="s1">This page hit weather of its own.</div><div class="s2">'+esc(e.message)+'</div></div>'; }
+  var dots=""; pages.forEach(function(p,i){ dots+=(i===idx?"&#9679; ":"&#9675; "); });
+  $("dots").innerHTML=dots.trim();
+}
+function advance(n){ var pages=activePages(); idx=(idx+n+pages.length)%pages.length; render(); }
+$("panel").addEventListener("click",function(e){
+  holdUntil=Date.now()+120000;
+  advance(e.clientX < window.innerWidth/2 ? -1 : 1);
+});
+document.addEventListener("keydown",function(e){
+  if(e.key==="ArrowRight"){holdUntil=Date.now()+120000;advance(1);}
+  if(e.key==="ArrowLeft"){holdUntil=Date.now()+120000;advance(-1);}
+});
+
+
+/* ================= RENDER FROM INJECTED DATA ================= */
+window.DATA = __DATA__;
+S.cur=DATA.cur; S.hist=DATA.hist||[]; S.nws=DATA.nws; S.alerts=DATA.alerts||[]; S.aqi=DATA.aqi;
+S.fire=DATA.fire||null; S.logbook=DATA.logbook||{}; S.lastTurn=DATA.now;
+window.FORCED_PAGE = DATA.page || null;
+renderForced();
+})();
+</script>
+</body>
+</html>

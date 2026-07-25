@@ -1,0 +1,45 @@
+name: Turn the page
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: render
+  cancel-in-progress: false
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          pip install --quiet requests pillow playwright
+          playwright install --with-deps chromium
+      - name: Build pages
+        env:
+          AWN_API_KEY: ${{ secrets.AWN_API_KEY }}
+          AWN_APP_KEY: ${{ secrets.AWN_APP_KEY }}
+        run: python renderer/build.py
+      - name: Keep the logbook
+        run: |
+          git config user.name "horseshoe-station"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/logbook.json
+          git diff --cached --quiet || git commit -m "logbook: $(date -u +%F)"
+          git push
+      - name: Upload site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - name: Deploy
+        uses: actions/deploy-pages@v4
