@@ -100,6 +100,19 @@
   .splash .s1{font-family:'IM Fell English',serif;font-style:italic;font-size:clamp(14px,2.6vw,21px)}
   .splash .s2{margin-top:2%;font-size:clamp(8px,1.5vw,11px);letter-spacing:.2em;text-transform:uppercase;color:#2e5f94}
   .demobadge{position:absolute;top:8px;left:10px;background:#d98f9c;color:#1a1a1a;font-size:10px;letter-spacing:.18em;padding:2px 8px;border-radius:3px;z-index:5;font-weight:600}
+  /* Held to the frame's 800x480 on a phone, the panel comes out about 370x222 —
+     and every clamp() in here bottoms out on its px floor at that size, so the
+     columns need more height than they are given and .col{overflow:hidden}
+     quietly eats whatever sits last: the glass remark, the trend, the bottom
+     rows of the deck log. Let the frame stand a little taller in the hand. */
+  @media (max-aspect-ratio: 1/1){
+    .panel{aspect-ratio:auto;height:min(94vh,78vw)}
+  }
+  /* Turned sideways there is no spare height left to give, so the trace yields
+     a little instead of the columns losing their last line. */
+  @media (min-aspect-ratio: 1/1) and (max-height: 520px){
+    .tracebox svg{max-height:15vh}
+  }
 </style>
 </head>
 <body>
@@ -397,15 +410,28 @@ function antiqueRoseSVG(){
 }
 function seriesPath(recs, key, x0,x1,y0,y1, vmin,vmax, N){
   N=N||110;
-  var step=Math.max(1,Math.floor(recs.length/N)), pts=[];
-  for(var i=0;i<recs.length;i+=step){
-    var v=recs[i][key]; if(v==null) continue;
-    var x=x0+(i/(recs.length-1))*(x1-x0);
-    var y=y1-((v-vmin)/(vmax-vmin))*(y1-y0);
-    pts.push(x.toFixed(1)+","+y.toFixed(1));
+  var n=recs.length, pts=[];
+  if(!n) return pts;
+  function X(i){ return n>1 ? x0+(i/(n-1))*(x1-x0) : x1; }
+  function Y(v){ return y1-((v-vmin)/(vmax-vmin))*(y1-y0); }
+  // Thin the run by buckets, keeping each bucket's low AND high in time order.
+  // Stepping over every nth reading walked straight past the gusts and the
+  // sharp falls of the glass — the trace has to keep the extremes it is for.
+  var bw=Math.max(1,Math.floor(n/N));
+  for(var b=0;b<n;b+=bw){
+    var end=Math.min(n,b+bw), loI=-1, hiI=-1, lo=Infinity, hi=-Infinity;
+    for(var i=b;i<end;i++){
+      var v=recs[i][key]; if(v==null) continue;
+      if(v<lo){ lo=v; loI=i; }
+      if(v>hi){ hi=v; hiI=i; }
+    }
+    if(loI<0) continue;
+    var first=Math.min(loI,hiI), second=Math.max(loI,hiI);
+    pts.push(X(first).toFixed(1)+","+Y(recs[first][key]).toFixed(1));
+    if(second!==first) pts.push(X(second).toFixed(1)+","+Y(recs[second][key]).toFixed(1));
   }
-  var last=recs[recs.length-1][key];
-  if(last!=null) pts.push(x1.toFixed(1)+","+(y1-((last-vmin)/(vmax-vmin))*(y1-y0)).toFixed(1));
+  var last=recs[n-1][key];
+  if(last!=null) pts.push(x1.toFixed(1)+","+Y(last).toFixed(1));
   return pts;
 }
 function glassTraceSVG(){
@@ -426,7 +452,7 @@ function glassTraceSVG(){
   if(hours>26&&midX>0) s+='<line x1="'+midX.toFixed(0)+'" y1="18" x2="'+midX.toFixed(0)+'" y2="72" stroke="'+INK+'" stroke-width="1" stroke-dasharray="2 4" opacity=".55"/><text x="'+midX.toFixed(0)+'" y="86" font-size="10" letter-spacing="1.5" fill="'+INK+'" text-anchor="middle" font-family="EB Garamond,serif">&minus;24 H</text>';
   s+='<path fill="url(#ht)" stroke="none" d="M'+pts.join(" L")+' L720,72 L0,72 Z"/>';
   s+='<path fill="none" stroke="'+INK+'" stroke-width="2" vector-effect="non-scaling-stroke" d="M'+pts.join(" L")+'"/>';
-  s+='<circle cx="720" cy="'+endY+'" r="3.4" fill="'+RED+'"/>';
+  s+='<circle cx="716.6" cy="'+endY+'" r="3.4" fill="'+RED+'"/>';  // held off the edge; centred on 720 it came out halved
   s+='<line x1="0" y1="72" x2="720" y2="72" stroke="'+INK+'" stroke-width="1.5"/>';
   s+='<text x="2" y="86" font-size="10" letter-spacing="1.5" fill="'+INK+'" font-family="EB Garamond,serif">&minus;'+Math.round(hours)+' H</text>';
   s+='<text x="718" y="86" font-size="10" letter-spacing="1.5" fill="'+INK+'" text-anchor="end" font-family="EB Garamond,serif">NOW</text>';
@@ -463,8 +489,12 @@ function gustTraceSVG(){
   s+='<line x1="0" y1="46" x2="720" y2="46" stroke="'+GRID+'" stroke-width="1"/>';
   s+='<path fill="none" stroke="'+INK+'" stroke-width="1.8" vector-effect="non-scaling-stroke" d="M'+gp.join(" L")+'"/>';
   s+='<path fill="none" stroke="'+BLUE+'" stroke-width="1.6" vector-effect="non-scaling-stroke" d="M'+sp.join(" L")+'"/>';
-  s+='<circle cx="'+mx.toFixed(0)+'" cy="'+my.toFixed(0)+'" r="3" fill="'+RED+'"/>';
-  s+='<text x="'+mx.toFixed(0)+'" y="'+(my-6).toFixed(0)+'" font-size="9.5" letter-spacing="1" fill="'+RED+'" text-anchor="middle" font-family="EB Garamond,serif" font-weight="600">'+Math.round(maxG)+'</text>';
+  // a peak sitting at either end used to lose its dot and half its number to
+  // the edge; when it rides high the label ducks under it instead of the header
+  var mdx=Math.min(717,Math.max(3,mx)), mtx=Math.min(704,Math.max(16,mx));
+  var mty=(my-6<19)?(my+12):(my-6);
+  s+='<circle cx="'+mdx.toFixed(0)+'" cy="'+my.toFixed(0)+'" r="3" fill="'+RED+'"/>';
+  s+='<text x="'+mtx.toFixed(0)+'" y="'+mty.toFixed(0)+'" font-size="9.5" letter-spacing="1" fill="'+RED+'" text-anchor="middle" font-family="EB Garamond,serif" font-weight="600">'+Math.round(maxG)+'</text>';
   s+='<line x1="0" y1="72" x2="720" y2="72" stroke="'+INK+'" stroke-width="1.5"/>';
   s+='<text x="2" y="86" font-size="10" letter-spacing="1.5" fill="'+INK+'" font-family="EB Garamond,serif">&minus;'+Math.round(hours)+' H</text>';
   s+='<text x="718" y="86" font-size="10" letter-spacing="1.5" fill="'+INK+'" text-anchor="end" font-family="EB Garamond,serif">NOW</text>';
@@ -617,11 +647,25 @@ function pageGlasshouse(){
     var rise=st.rise||tr[0].dateutc, set=st.set||tr[tr.length-1].dateutc;
     var pts=[];
     var step=Math.max(1,Math.floor(tr.length/90));
-    for(var i=0;i<tr.length;i+=step){
-      var frac=(tr[i].dateutc-rise)/(set-rise);
-      if(frac<0||frac>1.02)continue;
-      var x=x0+frac*(x1-x0), y=120-(tr[i].solarradiation/maxS)*95;
+    var plotSolar=function(k){
+      var frac=(tr[k].dateutc-rise)/(set-rise);
+      var x=x0+frac*(x1-x0), y=120-(tr[k].solarradiation/maxS)*95;
       pts.push(x.toFixed(1)+","+y.toFixed(1));
+    };
+    for(var b=0;b<tr.length;b+=step){          // keep each bucket's dimmest and
+      var e=Math.min(tr.length,b+step);        // brightest, so the burn-through
+      var loI=-1,hiI=-1,lo=Infinity,hi=-Infinity;   // peaks survive the thinning
+      for(var i=b;i<e;i++){
+        var f=(tr[i].dateutc-rise)/(set-rise);
+        if(f<0||f>1.02) continue;
+        var sv=tr[i].solarradiation; if(sv==null) continue;
+        if(sv<lo){ lo=sv; loI=i; }
+        if(sv>hi){ hi=sv; hiI=i; }
+      }
+      if(loI<0) continue;
+      var f1=Math.min(loI,hiI), f2=Math.max(loI,hiI);
+      plotSolar(f1);
+      if(f2!==f1) plotSolar(f2);
     }
     var peak=Math.max.apply(null,tr.map(function(r){return r.solarradiation;}));
     var peakR=tr.filter(function(r){return r.solarradiation===peak;})[0];
