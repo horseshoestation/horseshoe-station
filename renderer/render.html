@@ -1030,8 +1030,22 @@ function pageChart(){
   var F='font-family="EB Garamond,serif"', FI='font-family="IM Fell English,serif"';
   var s='<svg viewBox="0 0 720 332" preserveAspectRatio="xMidYMid meet" style="flex:1 1 auto;min-height:0;width:100%">';
   /* ---- the map box: lon -105.72..-105.355, lat 39.87..40.08 ---- */
-  s+='<rect x="2" y="4" width="482" height="326" fill="none" stroke="'+INK+'" stroke-width="1.5"/>';
-  s+='<rect x="5" y="7" width="476" height="320" fill="none" stroke="'+INK+'" stroke-width="0.6"/>';
+  /* hand-torn parchment edge — deterministic wobble so the e-ink never shimmers */
+  function roughRect(x0,y0,x1,y1,seed){
+    var pts=[];
+    function edge(ax,ay,bx,by,nx,ny){
+      var steps=Math.round(Math.max(Math.abs(bx-ax),Math.abs(by-ay))/16);
+      for(var k=0;k<steps;k++){
+        var t=k/steps, i=seed+pts.length;
+        var w=2.1*Math.sin(i*2.63)+1.2*Math.sin(i*1.41);
+        pts.push((ax+(bx-ax)*t+nx*w).toFixed(1)+','+(ay+(by-ay)*t+ny*w).toFixed(1));
+      }
+    }
+    edge(x0,y0,x1,y0,0,1); edge(x1,y0,x1,y1,-1,0); edge(x1,y1,x0,y1,0,-1); edge(x0,y1,x0,y0,1,0);
+    return 'M'+pts.join(' L')+' Z';
+  }
+  s+='<path d="'+roughRect(2,4,484,330,1)+'" fill="none" stroke="'+INK+'" stroke-width="1.7"/>';
+  s+='<path d="'+roughRect(7,9,479,325,5)+'" fill="none" stroke="'+INK+'" stroke-width="0.7"/>';
   /* graticule ticks */
   [[160.5,"105&#176;36&#8242;"],[292.5,"105&#176;30&#8242;"],[424.5,"105&#176;24&#8242;"]].forEach(function(t){
     s+='<line x1="'+t[0]+'" y1="4" x2="'+t[0]+'" y2="11" stroke="'+INK+'" stroke-width="0.8"/><line x1="'+t[0]+'" y1="323" x2="'+t[0]+'" y2="330" stroke="'+INK+'" stroke-width="0.8"/>';
@@ -1048,7 +1062,7 @@ function pageChart(){
       t+='<path d="M'+(x-3.4)+','+(y+3.4)+' L'+x+','+(y-4)+' L'+(x+3.4)+','+(y+3.4)+'" fill="none" stroke="'+GREEN+'" stroke-width="1.1"/>';
     });return t;
   }
-  s+=grove(142,122)+grove(152,248)+grove(234,150)+grove(332,248)+grove(368,86)+grove(258,292);
+  s+=grove(142,122)+grove(152,248)+grove(234,150)+grove(332,248)+grove(368,86)+grove(355,278);
   /* creeks */
   s+='<path d="M121,186 C150,196 168,205 183,209 C220,206 252,196 276,189 L306,193" fill="none" stroke="'+BLUE+'" stroke-width="1.2"/>';
   s+='<path d="M346,196 C370,188 395,172 424,152 C444,140 462,143 481,146" fill="none" stroke="'+BLUE+'" stroke-width="1.2"/>';
@@ -1091,12 +1105,28 @@ function pageChart(){
   s+='<path d="M391,106 L395,98 L399,106 Z" fill="'+INK+'"/><text x="395" y="116" text-anchor="middle" '+F+' font-size="7" fill="'+INK+'" letter-spacing="1">SUGARLOAF</text>';
   s+='<path d="M196,149 L202,155 M202,149 L196,155" stroke="'+INK+'" stroke-width="1.1" fill="none"/>';
   s+='<text x="199" y="144" text-anchor="middle" '+F+' font-size="7.5" fill="'+INK+'" letter-spacing="1">CARIBOU</text><text x="199" y="162" text-anchor="middle" '+F+' font-size="6" fill="'+INK+'" letter-spacing="0.5">GHOST CAMP</text>';
+  s+='<text x="199" y="171" text-anchor="middle" '+FI+' font-style="italic" font-size="6.5" fill="'+INK+'">silver dug here, 1870</text>';
+  /* here be moose (the honest local dragon) */
+  s+='<path d="M168,42 C165,36 166,31 170,28 M166,33 L163,31 M167,30 L165,27 M180,42 C183,36 182,31 178,28 M182,33 L185,31 M181,30 L183,27" stroke="'+INK+'" stroke-width="1" fill="none"/>';
+  s+='<text x="174" y="54" text-anchor="middle" '+FI+' font-style="italic" font-size="8" letter-spacing="1.5" fill="'+INK+'">HERE BE MOOSE</text>';
   s+='<path d="M180,218 L174,228 M184,218 L182,229 M188,218 L190,228" stroke="'+INK+'" stroke-width="0.9" fill="none"/>';
   s+='<text x="184" y="237" text-anchor="middle" '+F+' font-size="6.5" fill="'+INK+'" letter-spacing="0.5">THE SKI HILL</text>';
-  /* compass & scale */
+  /* compass & scale — rhumb rays first, so the rose sits on top */
+  for(var rk=0;rk<16;rk++){
+    var ra=rk*Math.PI/8, rl=(rk%2?30:42); if(rk===8)rl=30;
+    s+='<line x1="'+(140+6*Math.sin(ra)).toFixed(1)+'" y1="'+(290-6*Math.cos(ra)).toFixed(1)+'" x2="'+(140+rl*Math.sin(ra)).toFixed(1)+'" y2="'+(290-rl*Math.cos(ra)).toFixed(1)+'" stroke="'+GRID+'" stroke-width="0.7"/>';
+  }
+  s+='<circle cx="140" cy="290" r="23" fill="none" stroke="'+INK+'" stroke-width="0.8"/>';
+  s+='<circle cx="140" cy="290" r="20" fill="none" stroke="'+INK+'" stroke-width="0.5" stroke-dasharray="1 3"/>';
+  s+='<path d="M140,278 L148.5,281.5 L152,290 L148.5,298.5 L140,302 L131.5,298.5 L128,290 L131.5,281.5 Z" fill="'+PAPER+'" stroke="'+INK+'" stroke-width="0.8" transform="rotate(22.5,140,290)"/>';
   s+='<path d="M140,273 L144.5,285.5 L157,290 L144.5,294.5 L140,307 L135.5,294.5 L123,290 L135.5,285.5 Z" fill="'+PAPER+'" stroke="'+INK+'" stroke-width="1.2"/>';
-  s+='<path d="M140,273 L144.5,285.5 L140,290 Z" fill="'+INK+'"/><circle cx="140" cy="290" r="1.6" fill="'+INK+'"/>';
-  s+='<text x="140" y="268" text-anchor="middle" '+FI+' font-size="9" fill="'+INK+'">N</text>';
+  s+='<path d="M140,273 L144.5,285.5 L140,290 Z" fill="'+RED+'"/><path d="M140,290 L135.5,294.5 L140,307 Z" fill="'+INK+'"/><circle cx="140" cy="290" r="1.6" fill="'+INK+'"/>';
+  s+='<text x="140" y="264" text-anchor="middle" '+FI+' font-size="9" fill="'+RED+'">N</text>';
+  /* ye key */
+  s+='<text x="212" y="296" '+F+' font-size="6.5" font-weight="600" fill="'+INK+'" letter-spacing="1.5">YE KEY</text>';
+  s+='<line x1="212" y1="303" x2="238" y2="303" stroke="'+BLUE+'" stroke-width="1.2"/><text x="243" y="306" '+F+' font-size="6.5" fill="'+INK+'" letter-spacing="0.5">CREEK</text>';
+  s+='<line x1="212" y1="312" x2="238" y2="312" stroke="'+INK+'" stroke-width="2.6"/><line x1="212" y1="312" x2="238" y2="312" stroke="'+PAPER+'" stroke-width="1.1"/><text x="243" y="315" '+F+' font-size="6.5" fill="'+INK+'" letter-spacing="0.5">ROAD</text>';
+  s+='<line x1="212" y1="321" x2="238" y2="321" stroke="'+INK+'" stroke-width="1" stroke-dasharray="4 2.5"/><text x="243" y="324" '+F+' font-size="6.5" fill="'+INK+'" letter-spacing="0.5">WAGON ROAD</text>';
   s+='<rect x="320" y="313" width="74.7" height="5" fill="'+INK+'"/><rect x="394.7" y="313" width="74.7" height="5" fill="none" stroke="'+INK+'" stroke-width="1"/>';
   s+='<text x="320" y="309" text-anchor="middle" '+F+' font-size="6.5" fill="'+INK+'">0</text><text x="394.7" y="309" text-anchor="middle" '+F+' font-size="6.5" fill="'+INK+'">3</text><text x="469" y="309" text-anchor="middle" '+F+' font-size="6.5" fill="'+INK+'">6 MI</text>';
   /* the towns and their weather */
@@ -1118,11 +1148,10 @@ function pageChart(){
     s+='<line x1="'+(299+hx*9).toFixed(1)+'" y1="'+(176+hy*9).toFixed(1)+'" x2="'+ex.toFixed(1)+'" y2="'+ey.toFixed(1)+'" stroke="'+BLUE+'" stroke-width="2.6"/>';
     s+='<path d="M'+(ex+hx*8).toFixed(1)+','+(ey+hy*8).toFixed(1)+' L'+(ex-hy*4.5).toFixed(1)+','+(ey+hx*4.5).toFixed(1)+' L'+(ex+hy*4.5).toFixed(1)+','+(ey-hx*4.5).toFixed(1)+' Z" fill="'+BLUE+'"/>';
   }
-  function star(cx,cy,r1,r2){
-    var p='';for(var k=0;k<12;k++){var r=k%2?r2:r1,a=k*Math.PI/6;p+=(k?'L':'M')+(cx+r*Math.sin(a)).toFixed(1)+','+(cy-r*Math.cos(a)).toFixed(1)+' ';}
-    return '<path d="'+p+'Z" fill="'+RED+'"/>';
-  }
-  s+=star(299,176,7,3);
+  /* ye way in: red footsteps up the canon to the X */
+  s+='<path d="M481,143 C465,141 447,138 428,150 C402,166 378,181 352,190 C338,187 322,183 310,180 L303,178" fill="none" stroke="'+RED+'" stroke-width="2.4" stroke-dasharray="0.1 8" stroke-linecap="round"/>';
+  /* X marks the station */
+  s+='<path d="M292,169 C297,173 301,179 306,183 M306,169 C301,173 297,179 292,183" stroke="'+RED+'" stroke-width="3" fill="none" stroke-linecap="round"/>';
   s+='<text x="307" y="164" '+F+' font-size="7.5" font-weight="600" fill="'+RED+'" letter-spacing="1">THE STATION</text>';
   /* ---- the ledger panel ---- */
   s+='<line x1="490" y1="6" x2="490" y2="328" stroke="'+GRID+'" stroke-width="1"/>';
