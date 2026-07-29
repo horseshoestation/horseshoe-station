@@ -168,7 +168,7 @@ var DIRS=["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WN
 
 /* ================= STATE ================= */
 var S = {
-  cur:null, hist:[],           // AWN: lastData, records oldest->newest
+  cur:null, hist:[], neighbors:null,   // AWN: lastData, records oldest->newest; the chart's company
   nws:null, alerts:[],         // forecast periods, active alerts
   aqi:null,                    // {us_aqi, pm2_5, pm10}
   demo:false, lastTurn:null, errors:{}
@@ -286,6 +286,27 @@ async function loadNWS(){
 }
 async function loadSummary(){
   try{ var sm=await j("summary.json?t="+Date.now()); S.fire=sm.fire||null; }catch(e){}
+}
+// mirror of build.py NEIGHBORS — name, lat, lon, elevation m, elevation ft
+var NBR=[["The Divide",40.0128,-105.6440,3630,11906],["Ward",40.0722,-105.5089,2880,9450],
+         ["Eldora",39.9472,-105.5828,2710,8890],["Gold Hill",40.0630,-105.4101,2530,8300],
+         ["Rollinsville",39.9169,-105.5022,2461,8074],["Boulder",40.0150,-105.2705,1624,5328]];
+async function loadNeighbors(){
+  try{
+    var q="latitude="+NBR.map(function(p){return p[1];}).join(",")
+      +"&longitude="+NBR.map(function(p){return p[2];}).join(",")
+      +"&elevation="+NBR.map(function(p){return p[3];}).join(",")
+      +"&current=temperature_2m,weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m"
+      +"&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto";
+    var a=await j("https://api.open-meteo.com/v1/forecast?"+q);
+    var arr=Array.isArray(a)?a:[a];
+    S.neighbors=NBR.map(function(p,i){
+      var c=(arr[i]&&arr[i].current)||{};
+      return {name:p[0], lat:p[1], lon:p[2], elev:p[4], tempf:c.temperature_2m,
+              code:c.weather_code, windmph:c.wind_speed_10m,
+              gustmph:c.wind_gusts_10m, winddir:c.wind_direction_10m};
+    });
+  }catch(e){ /* the chart draws with em-dashes */ }
 }
 async function loadAQI(){
   try{
@@ -888,11 +909,160 @@ function pageWarning(alert){
     +'</div>';
 }
 
+/* ================= THE CHART ================= */
+function omGlyph(code){
+  if(code==null)return null;
+  if(code<=1)return 'sun';
+  if(code===2)return 'psun';
+  if(code===3||code===45||code===48)return 'cloud';
+  if((code>=71&&code<=77)||code===85||code===86)return 'snow';
+  if(code>=95)return 'storm';
+  return 'rain';
+}
+function gAt(kind,x,y,sz){ return kind?glyphSVG(kind).replace('<svg ','<svg x="'+x+'" y="'+y+'" width="'+sz+'" height="'+sz+'" '):''; }
+function pageChart(){
+  var c=S.cur, nbs=S.neighbors||[];
+  function nb(i){ return nbs[i]||{}; }
+  function tf(t){ return t==null?'&#8212;':Math.round(t)+'&#176;'; }
+  var F='font-family="EB Garamond,serif"', FI='font-family="IM Fell English,serif"';
+  var s='<svg viewBox="0 0 720 332" preserveAspectRatio="xMidYMid meet" style="flex:1 1 auto;min-height:0;width:100%">';
+  /* ---- the map box: lon -105.72..-105.355, lat 39.87..40.08 ---- */
+  s+='<rect x="2" y="4" width="482" height="326" fill="none" stroke="'+INK+'" stroke-width="1.5"/>';
+  s+='<rect x="5" y="7" width="476" height="320" fill="none" stroke="'+INK+'" stroke-width="0.6"/>';
+  /* graticule ticks */
+  [[160.5,"105&#176;36&#8242;"],[292.5,"105&#176;30&#8242;"],[424.5,"105&#176;24&#8242;"]].forEach(function(t){
+    s+='<line x1="'+t[0]+'" y1="4" x2="'+t[0]+'" y2="11" stroke="'+INK+'" stroke-width="0.8"/><line x1="'+t[0]+'" y1="323" x2="'+t[0]+'" y2="330" stroke="'+INK+'" stroke-width="0.8"/>';
+  });
+  s+='<text x="292.5" y="320" text-anchor="middle" '+F+' font-size="6.5" fill="'+INK+'" letter-spacing="1">105&#176;30&#8242; W</text>';
+  [50.6,128.2,205.8,283.4].forEach(function(y){
+    s+='<line x1="2" y1="'+y+'" x2="9" y2="'+y+'" stroke="'+INK+'" stroke-width="0.8"/><line x1="477" y1="'+y+'" x2="484" y2="'+y+'" stroke="'+INK+'" stroke-width="0.8"/>';
+  });
+  s+='<text x="13" y="131" '+F+' font-size="6.5" fill="'+INK+'" letter-spacing="1">40&#176; N</text>';
+  /* forest */
+  function grove(cx,cy){
+    var t='';[[-8,1],[0,-4],[8,2]].forEach(function(o){
+      var x=cx+o[0],y=cy+o[1];
+      t+='<path d="M'+(x-3.4)+','+(y+3.4)+' L'+x+','+(y-4)+' L'+(x+3.4)+','+(y+3.4)+'" fill="none" stroke="'+GREEN+'" stroke-width="1.1"/>';
+    });return t;
+  }
+  s+=grove(142,122)+grove(152,248)+grove(234,150)+grove(332,248)+grove(368,86)+grove(258,292);
+  /* creeks */
+  s+='<path d="M121,186 C150,196 168,205 183,209 C220,206 252,196 276,189 L306,193" fill="none" stroke="'+BLUE+'" stroke-width="1.2"/>';
+  s+='<path d="M346,196 C370,188 395,172 424,152 C444,140 462,143 481,146" fill="none" stroke="'+BLUE+'" stroke-width="1.2"/>';
+  s+='<path d="M134,96 C190,104 300,112 372,128 C395,133 412,142 423,150" fill="none" stroke="'+BLUE+'" stroke-width="1"/>';
+  /* Barker Reservoir */
+  s+='<path d="M306,191 L318,188 L331,189 L344,191 L346,196 L339,201 L322,202 L309,198 Z" fill="'+BLUE+'"/>';
+  s+='<text x="331" y="213" text-anchor="middle" '+FI+' font-style="italic" font-size="7.5" fill="'+BLUE+'">Barker Res.</text>';
+  s+='<circle cx="289" cy="164" r="2.5" fill="'+BLUE+'"/>';
+  /* roads: Peak to Peak (hollow double line), Boulder Canyon, lanes */
+  var p2p='M290,257 C287,232 282,208 279,196 L278,188 C276,168 279,148 283,130 C287,100 283,58 281,16';
+  var cyn='M278,186 C310,184 340,186 352,190 C378,181 402,166 428,150 C447,138 465,141 481,143';
+  s+='<path d="'+p2p+'" fill="none" stroke="'+INK+'" stroke-width="2.6"/><path d="'+p2p+'" fill="none" stroke="'+PAPER+'" stroke-width="1.1"/>';
+  s+='<path d="'+cyn+'" fill="none" stroke="'+INK+'" stroke-width="2.2"/><path d="'+cyn+'" fill="none" stroke="'+PAPER+'" stroke-width="0.9"/>';
+  s+='<path d="M281,203 C320,216 380,226 440,231 L481,233" fill="none" stroke="'+INK+'" stroke-width="1" stroke-dasharray="4 2.5"/>';
+  s+='<path d="M279,196 C255,201 220,206 187,210" fill="none" stroke="'+INK+'" stroke-width="1.2"/>';
+  s+='<path d="M200,208 L188,220" fill="none" stroke="'+INK+'" stroke-width="1"/>';
+  s+='<path d="M277,182 C252,172 222,160 202,153" fill="none" stroke="'+INK+'" stroke-width="1" stroke-dasharray="3 2.5"/>';
+  /* the Divide: ridge + hachures + peaks */
+  var ridge=[[28,322],[44,276],[52,231],[65,198],[70,165],[76,131],[102,108],[96,94],[96,83],[101,58],[108,35],[110,4]];
+  var rp='M'+ridge.map(function(p){return p[0]+','+p[1];}).join(' L');
+  s+='<path d="'+rp+'" fill="none" stroke="'+INK+'" stroke-width="1.8"/>';
+  for(var i=1;i<ridge.length;i++){
+    var ax=ridge[i-1][0],ay=ridge[i-1][1],bx=ridge[i][0],by=ridge[i][1];
+    var dx=bx-ax,dy=by-ay,ln=Math.sqrt(dx*dx+dy*dy),nx=-dy/ln,ny=dx/ln;
+    if(nx<0){nx=-nx;ny=-ny;}
+    [0.3,0.7].forEach(function(t){
+      var px=ax+dx*t,py=ay+dy*t;
+      s+='<line x1="'+px.toFixed(1)+'" y1="'+py.toFixed(1)+'" x2="'+(px+nx*7).toFixed(1)+'" y2="'+(py+ny*7).toFixed(1)+'" stroke="'+INK+'" stroke-width="0.9"/>';
+    });
+  }
+  s+='<path d="M91,98 L96,88 L101,98 Z" fill="'+INK+'"/><path d="M90,87 L95,77 L100,87 Z" fill="'+INK+'"/>';
+  s+='<text x="106" y="86" '+FI+' font-style="italic" font-size="8" fill="'+INK+'">The Arapahos</text><text x="106" y="95" '+F+' font-size="6.5" fill="'+INK+'">13,502</text>';
+  s+='<path d="M72,134 L76,126 L80,134 Z" fill="'+INK+'"/><text x="84" y="134" '+FI+' font-style="italic" font-size="7" fill="'+INK+'">Mt Neva</text>';
+  s+='<text x="58" y="228" '+F+' font-size="7" fill="'+INK+'" letter-spacing="1">ROLLINS PASS</text>';
+  s+='<text x="40" y="210" text-anchor="middle" '+FI+' font-style="italic" font-size="10" letter-spacing="4" fill="'+INK+'" transform="rotate(-75,40,210)">THE GREAT DIVIDE</text>';
+  s+='<text x="14" y="20" '+FI+' font-style="italic" font-size="8.5" letter-spacing="2" fill="'+INK+'">INDIAN PEAKS</text>';
+  s+='<text x="310" y="72" text-anchor="middle" '+FI+' font-style="italic" font-size="8" letter-spacing="2" fill="'+INK+'">ROOSEVELT NAT. FOREST</text>';
+  s+='<text x="416" y="178" text-anchor="middle" '+FI+' font-style="italic" font-size="7.5" letter-spacing="1.5" fill="'+INK+'" transform="rotate(-20,416,178)">BOULDER CA&#209;ON</text>';
+  /* Sugarloaf, Caribou, the ski hill */
+  s+='<path d="M391,106 L395,98 L399,106 Z" fill="'+INK+'"/><text x="395" y="116" text-anchor="middle" '+F+' font-size="7" fill="'+INK+'" letter-spacing="1">SUGARLOAF</text>';
+  s+='<path d="M196,149 L202,155 M202,149 L196,155" stroke="'+INK+'" stroke-width="1.1" fill="none"/>';
+  s+='<text x="199" y="144" text-anchor="middle" '+F+' font-size="7.5" fill="'+INK+'" letter-spacing="1">CARIBOU</text><text x="199" y="162" text-anchor="middle" '+F+' font-size="6" fill="'+INK+'" letter-spacing="0.5">GHOST CAMP</text>';
+  s+='<path d="M180,218 L174,228 M184,218 L182,229 M188,218 L190,228" stroke="'+INK+'" stroke-width="0.9" fill="none"/>';
+  s+='<text x="184" y="237" text-anchor="middle" '+F+' font-size="6.5" fill="'+INK+'" letter-spacing="0.5">THE SKI HILL</text>';
+  /* compass & scale */
+  s+='<path d="M140,273 L144.5,285.5 L157,290 L144.5,294.5 L140,307 L135.5,294.5 L123,290 L135.5,285.5 Z" fill="'+PAPER+'" stroke="'+INK+'" stroke-width="1.2"/>';
+  s+='<path d="M140,273 L144.5,285.5 L140,290 Z" fill="'+INK+'"/><circle cx="140" cy="290" r="1.6" fill="'+INK+'"/>';
+  s+='<text x="140" y="268" text-anchor="middle" '+FI+' font-size="9" fill="'+INK+'">N</text>';
+  s+='<rect x="320" y="313" width="74.7" height="5" fill="'+INK+'"/><rect x="394.7" y="313" width="74.7" height="5" fill="none" stroke="'+INK+'" stroke-width="1"/>';
+  s+='<text x="320" y="309" text-anchor="middle" '+F+' font-size="6.5" fill="'+INK+'">0</text><text x="394.7" y="309" text-anchor="middle" '+F+' font-size="6.5" fill="'+INK+'">3</text><text x="469" y="309" text-anchor="middle" '+F+' font-size="6.5" fill="'+INK+'">6 MI</text>';
+  /* the towns and their weather */
+  s+='<circle cx="281" cy="16" r="3" fill="'+INK+'"/><text x="290" y="21" '+F+' font-size="9.5" font-weight="600" fill="'+INK+'" letter-spacing="0.5">WARD &#183; '+tf(nb(1).tempf)+'</text>'+gAt(omGlyph(nb(1).code),352,11,13);
+  s+='<circle cx="183" cy="210" r="3" fill="'+INK+'"/><text x="176" y="205" text-anchor="end" '+F+' font-size="9.5" font-weight="600" fill="'+INK+'" letter-spacing="0.5">ELDORA &#183; '+tf(nb(2).tempf)+'</text>'+gAt(omGlyph(nb(2).code),94,196,13);
+  s+='<circle cx="411" cy="30" r="3" fill="'+INK+'"/><text x="411" y="44" text-anchor="middle" '+F+' font-size="9.5" font-weight="600" fill="'+INK+'" letter-spacing="0.5">GOLD HILL</text>';
+  s+='<text x="407" y="58" text-anchor="end" '+F+' font-size="10.5" font-weight="600" fill="'+INK+'">'+tf(nb(3).tempf)+'</text>'+gAt(omGlyph(nb(3).code),411,47.5,13);
+  s+='<circle cx="290" cy="257" r="3" fill="'+INK+'"/><text x="298" y="261" '+F+' font-size="9.5" font-weight="600" fill="'+INK+'" letter-spacing="0.5">ROLLINSVILLE &#183; '+tf(nb(4).tempf)+'</text>'+gAt(omGlyph(nb(4).code),404,250.5,13);
+  s+='<text x="116" y="110" '+F+' font-size="11.5" font-weight="600" fill="'+INK+'">'+tf(nb(0).tempf)+'</text>';
+  if(nb(0).gustmph!=null) s+='<text x="116" y="121" '+F+' font-size="8" font-weight="600" fill="'+(nb(0).gustmph>=40?RED:INK)+'">G '+Math.round(nb(0).gustmph)+'</text>';
+  s+='<text x="476" y="136" text-anchor="end" '+F+' font-size="8.5" font-weight="600" fill="'+INK+'" letter-spacing="0.5">TO BOULDER &#183; '+tf(nb(5).tempf)+'</text><path d="M478,140 L484,143 L477,147 Z" fill="'+INK+'"/>';
+  /* Nederland and the station */
+  s+='<circle cx="278" cy="188" r="3.5" fill="'+PAPER+'" stroke="'+INK+'" stroke-width="1.4"/>';
+  s+='<text x="269" y="184" text-anchor="end" '+F+' font-size="9.5" font-weight="600" fill="'+INK+'" letter-spacing="0.5">NEDERLAND</text>';
+  s+='<text x="269" y="192" text-anchor="end" '+F+' font-size="6.5" fill="'+INK+'">8,236 FT</text>';
+  if(c.winddir!=null){
+    var th=(c.winddir+180)*Math.PI/180, L=18+Math.min(40,(c.windspeedmph||0)*2.6);
+    var hx=Math.sin(th),hy=-Math.cos(th),ex=299+hx*L,ey=176+hy*L;
+    s+='<line x1="'+(299+hx*9).toFixed(1)+'" y1="'+(176+hy*9).toFixed(1)+'" x2="'+ex.toFixed(1)+'" y2="'+ey.toFixed(1)+'" stroke="'+BLUE+'" stroke-width="2.6"/>';
+    s+='<path d="M'+(ex+hx*8).toFixed(1)+','+(ey+hy*8).toFixed(1)+' L'+(ex-hy*4.5).toFixed(1)+','+(ey+hx*4.5).toFixed(1)+' L'+(ex+hy*4.5).toFixed(1)+','+(ey-hx*4.5).toFixed(1)+' Z" fill="'+BLUE+'"/>';
+  }
+  function star(cx,cy,r1,r2){
+    var p='';for(var k=0;k<12;k++){var r=k%2?r2:r1,a=k*Math.PI/6;p+=(k?'L':'M')+(cx+r*Math.sin(a)).toFixed(1)+','+(cy-r*Math.cos(a)).toFixed(1)+' ';}
+    return '<path d="'+p+'Z" fill="'+RED+'"/>';
+  }
+  s+=star(299,176,7,3);
+  s+='<text x="307" y="164" '+F+' font-size="7.5" font-weight="600" fill="'+RED+'" letter-spacing="1">THE STATION</text>';
+  /* ---- the ledger panel ---- */
+  s+='<line x1="490" y1="6" x2="490" y2="328" stroke="'+GRID+'" stroke-width="1"/>';
+  s+='<text x="497" y="20" '+F+' font-size="10" font-weight="600" fill="'+BLUE+'" letter-spacing="3">THE COUNTRY ROUND</text>';
+  s+='<text x="497" y="32" '+F+' font-size="6.5" fill="'+INK+'" letter-spacing="1.5">&#176;F THIS HOUR &#183; SEEN FROM THE STATION</text>';
+  var rows=[
+    {n:'THE DIVIDE',e:'11,906',t:nb(0).tempf,g:omGlyph(nb(0).code)},
+    {n:'WARD',e:'9,450',t:nb(1).tempf,g:omGlyph(nb(1).code)},
+    {n:'ELDORA',e:'8,890',t:nb(2).tempf,g:omGlyph(nb(2).code)},
+    {n:'NEDERLAND',e:'8,373',t:c.tempf,g:(S.nws&&S.nws[0])?glyphFor(S.nws[0].shortForecast):null,red:1},
+    {n:'GOLD HILL',e:'8,300',t:nb(3).tempf,g:omGlyph(nb(3).code)},
+    {n:'ROLLINSVILLE',e:'8,074',t:nb(4).tempf,g:omGlyph(nb(4).code)},
+    {n:'BOULDER',e:'5,328',t:nb(5).tempf,g:omGlyph(nb(5).code)}
+  ];
+  rows.forEach(function(r,i){
+    var y=54+i*21;
+    s+='<text x="497" y="'+y+'" '+F+' font-size="9" font-weight="600" letter-spacing="1" fill="'+(r.red?RED:INK)+'">'+r.n+'<tspan font-size="6.3" font-weight="400" letter-spacing="0.5"> &#183; '+r.e+'&#8242;</tspan></text>';
+    s+='<line x1="612" y1="'+(y-3)+'" x2="664" y2="'+(y-3)+'" stroke="'+INK+'" stroke-width="0.8" stroke-dasharray="1 3"/>';
+    s+=gAt(r.g,668,y-11,13);
+    s+='<text x="716" y="'+y+'" text-anchor="end" '+F+' font-size="11.5" font-weight="600" fill="'+(r.red?RED:INK)+'">'+tf(r.t)+'</text>';
+  });
+  s+='<line x1="497" y1="196" x2="716" y2="196" stroke="'+GRID+'" stroke-width="1"/>';
+  s+='<text x="497" y="214" '+F+' font-size="8" font-weight="600" fill="'+BLUE+'" letter-spacing="2">THE WIND NOW</text>';
+  s+='<text x="497" y="230" '+F+' font-size="10" font-weight="600" fill="'+INK+'" letter-spacing="0.5">'+dirName(c.winddir)+' '+Math.round(c.windspeedmph)+' &#183; GUSTING '+Math.round(c.windgustmph)+' MPH</text>';
+  s+='<text x="497" y="244" '+FI+' font-style="italic" font-size="7.5" fill="'+INK+'">the arrow on the chart flies with the wind</text>';
+  var warn=activeWarning(), evt=warn?warn.event:((S.alerts&&S.alerts[0])?S.alerts[0].event:null);
+  if(evt){
+    var txt=esc(String(evt).toUpperCase()); if(txt.length>34)txt=txt.slice(0,33)+'&#8230;';
+    s+='<rect x="497" y="258" width="220" height="24" rx="12" fill="none" stroke="'+RED+'" stroke-width="1.2"/>';
+    s+='<text x="607" y="274" text-anchor="middle" '+F+' font-size="8" font-weight="600" fill="'+RED+'" letter-spacing="1.5">'+txt+'</text>';
+  } else {
+    s+='<rect x="497" y="258" width="220" height="24" rx="12" fill="none" stroke="'+GREEN+'" stroke-width="1.2"/>';
+    s+='<text x="607" y="274" text-anchor="middle" '+F+' font-size="8" font-weight="600" fill="'+GREEN+'" letter-spacing="1.5">NO WATCHES POSTED</text>';
+  }
+  if(S.fire&&S.fire.stage) s+='<text x="607" y="300" text-anchor="middle" '+F+' font-size="8" font-weight="600" fill="'+RED+'" letter-spacing="1">'+esc(S.fire.stage.toUpperCase())+' &#183; BOULDER CO.</text>';
+  return s+'</svg>';
+}
 /* ================= CYCLE & RENDER ================= */
 var PAGES=[
   {id:"glass", title:"THE GLASS", fn:pageGlass},
   {id:"wind", title:"THE WIND", fn:pageWind},
   {id:"week", title:"THE WEEK AHEAD", fn:pageWeek},
+  {id:"chart", title:"THE CHART", fn:pageChart},
   {id:"glasshouse", title:"THE GLASSHOUSE", fn:pageGlasshouse},
   {id:"almanack", title:"THE ALMANACK", fn:pageAlmanack}
 ];
@@ -968,10 +1138,12 @@ async function boot(){
   loadNWS().then(render);
   loadAQI().then(render);
   loadSummary().then(render);
+  loadNeighbors().then(render);
   /* refresh cadences */
   setInterval(function(){ loadAWN(false).then(function(){S.lastTurn=Date.now();render();}).catch(function(e){S.errors.awn=e.message;render();}); }, 120000);
   setInterval(function(){ loadAWN(true).catch(function(){}); }, 900000);
   setInterval(loadNWS, 1800000);
+  setInterval(function(){ loadNeighbors().then(render); }, 1800000);
   setInterval(loadAQI, 3600000);
   setInterval(function(){ loadNWS(); }, 300000);
 }

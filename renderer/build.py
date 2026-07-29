@@ -57,6 +57,50 @@ def fetch_awn():
     recs.reverse()
     return cur, recs
 
+# The Chart's company: name, lat, lon, elevation m (Open-Meteo wants meters),
+# elevation ft (what the page prints)
+NEIGHBORS = [
+    ("The Divide", 40.0128, -105.6440, 3630, 11906),   # Arapaho Pass
+    ("Ward", 40.0722, -105.5089, 2880, 9450),
+    ("Eldora", 39.9472, -105.5828, 2710, 8890),
+    ("Gold Hill", 40.0630, -105.4101, 2530, 8300),
+    ("Rollinsville", 39.9169, -105.5022, 2461, 8074),
+    ("Boulder", 40.0150, -105.2705, 1624, 5328),
+]
+
+def fetch_neighbors():
+    try:
+        r = requests.get(
+            "https://api.open-meteo.com/v1/forecast"
+            "?latitude=" + ",".join(str(p[1]) for p in NEIGHBORS)
+            + "&longitude=" + ",".join(str(p[2]) for p in NEIGHBORS)
+            + "&elevation=" + ",".join(str(p[3]) for p in NEIGHBORS)
+            + "&current=temperature_2m,weather_code,wind_speed_10m,"
+              "wind_gusts_10m,wind_direction_10m"
+            + "&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto",
+            timeout=20, headers=UA).json()
+        arr = r if isinstance(r, list) else [r]
+        out = []
+        for p, d in zip(NEIGHBORS, arr):
+            c = d.get("current") or {}
+            out.append(dict(name=p[0], lat=p[1], lon=p[2], elev=p[4],
+                            tempf=c.get("temperature_2m"), code=c.get("weather_code"),
+                            windmph=c.get("wind_speed_10m"), gustmph=c.get("wind_gusts_10m"),
+                            winddir=c.get("wind_direction_10m")))
+        return out
+    except Exception:
+        return None                      # the chart still draws, temps show em-dashes
+
+def mock_neighbors(cur):
+    codes = [2, 1, 2, 0, 1, 3]
+    winds = [(22, 38, 275), (9, 15, 250), (7, 12, 240), (5, 9, 230), (6, 11, 245), (4, 8, 160)]
+    out = []
+    for p, code, w in zip(NEIGHBORS, codes, winds):
+        out.append(dict(name=p[0], lat=p[1], lon=p[2], elev=p[4],
+                        tempf=round(cur["tempf"] - (p[4] - 8373) * 3.3 / 1000, 1),
+                        code=code, windmph=w[0], gustmph=w[1], winddir=w[2]))
+    return out
+
 def fetch_nws():
     try:
         p = requests.get(f"https://api.weather.gov/points/{LAT},{LON}", timeout=20, headers=UA).json()
@@ -170,7 +214,7 @@ def update_logbook(cur, hist):
 
 # ---------------- rotation ----------------
 def decide_pages(now_local, aqi, alerts, month):
-    cycle = ["glass", "wind", "week", "glasshouse"]
+    cycle = ["glass", "wind", "week", "chart", "glasshouse"]
     if 4 <= month - 1 <= 9:                     # May..Oct (month is 1-based)
         cycle.append("fire")
     if month in (11, 12, 1, 2, 3):
@@ -241,16 +285,19 @@ def stage_site(data, cycle):
 def main():
     if MOCK:
         cur, hist, nws, alerts, aqi, fire = mock_data()
+        neighbors = mock_neighbors(cur)
     else:
         cur, hist = fetch_awn()
         nws, alerts = fetch_nws()
         aqi = fetch_aqi()
         fire = fetch_fire_ban()
+        neighbors = fetch_neighbors()
     book = update_logbook(cur, hist)
     import zoneinfo
     nl = datetime.datetime.now(zoneinfo.ZoneInfo(TZ))
     cycle, current = decide_pages(nl, aqi, alerts, nl.month)
     data = dict(cur=cur, hist=hist, nws=nws, alerts=alerts, aqi=aqi, fire=fire,
+                neighbors=neighbors,
                 logbook=book, now=now_ms(), cycle=cycle, current=current)
     render_pages(data, cycle)
     stage_site(data, cycle)
