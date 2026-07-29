@@ -1,7 +1,9 @@
 name: Turn the page
 on:
   schedule:
-    - cron: "*/10 * * * *"
+    # Off-round minutes: GitHub's shared cron drops most */10 firings at
+    # :00/:10/:20 when every other repo asks for the same slots.
+    - cron: "4,14,24,34,44,54 * * * *"
   workflow_dispatch: {}
 
 permissions:
