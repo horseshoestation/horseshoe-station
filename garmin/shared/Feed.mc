@@ -8,6 +8,12 @@ using Toybox.Time;
 // One small flat JSON, published beside the frame's own pages every ten
 // minutes by the same GitHub Action. The watch holds no keys and does no
 // arithmetic it can avoid — see renderer/watch_build.py for what each key is.
+//
+// (:background) because the face's temporal service calls URL,
+// requestOptions and compact — without the annotation the compiler strips
+// this module from the background image and the service dies at runtime
+// with Symbol Not Found, silently, every five minutes.
+(:background)
 module Feed {
 
     const URL = "https://horseshoestation.github.io/horseshoe-station/watch.json";

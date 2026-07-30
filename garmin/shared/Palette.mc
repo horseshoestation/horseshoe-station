@@ -5,6 +5,12 @@ using Toybox.Application;
 // dark bedroom. So the default inverts to ink-black paper with cream letters,
 // and the four accents are lifted to carry on black. Paper mode reproduces the
 // wall frame exactly, for daylight and for the pleasure of it.
+//
+// (:background) because the face's AppBase calls load() from onStart, and
+// onStart also runs when the system spins the app up for its background
+// service — an unannotated Palette would kill the service before its
+// first fetch.
+(:background)
 module Palette {
 
     // dark ("Night Watch") — the default

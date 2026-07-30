@@ -38,6 +38,7 @@ class HorseshoeService extends System.ServiceDelegate {
     }
 }
 
+(:background)
 class HorseshoeFaceApp extends Application.AppBase {
 
     function initialize() {
