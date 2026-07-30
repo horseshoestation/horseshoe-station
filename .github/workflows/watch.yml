@@ -1,0 +1,64 @@
+name: Build the watch
+
+# Garmin gates device definition files behind an authenticated account, so the
+# only way to produce a real signed .prg is to log in. That happens here, with
+# credentials you hold as repository secrets, and never on a laptop.
+on:
+  workflow_dispatch: {}
+  push:
+    paths:
+      - "garmin/**"
+      - ".github/workflows/watch.yml"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: Install the Connect IQ SDK manager
+        run: go install github.com/lindell/connect-iq-sdk-manager-cli@latest
+
+      - name: Fetch the SDK and the epix device files
+        env:
+          GARMIN_USERNAME: ${{ secrets.GARMIN_USERNAME }}
+          GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
+        run: |
+          connect-iq-sdk-manager agreement accept \
+            --acceptance-hash="${{ secrets.CIQ_AGREEMENT_HASH }}"
+          connect-iq-sdk-manager login
+          connect-iq-sdk-manager sdk set '^9'
+          echo "$(connect-iq-sdk-manager sdk current-path --bin)" >> "$GITHUB_PATH"
+          connect-iq-sdk-manager device download --manifest=garmin/face/manifest.xml
+          connect-iq-sdk-manager device download --manifest=garmin/app/manifest.xml
+
+      - name: Unlock the signing key
+        run: |
+          mkdir -p ~/.ciqkeys
+          echo "${{ secrets.CIQ_DEVELOPER_KEY_B64 }}" | base64 -d > ~/.ciqkeys/developer_key.der
+          test -s ~/.ciqkeys/developer_key.der
+
+      # -w surfaces warnings, -r builds release (optimised) rather than debug.
+      - name: Build the face and the app
+        run: |
+          set -e
+          mkdir -p out
+          for p in face app; do
+            (cd "garmin/$p" && monkeyc \
+              -f monkey.jungle \
+              -d epix2 \
+              -y ~/.ciqkeys/developer_key.der \
+              -o "../../out/horseshoe-$p.prg" \
+              -w -r)
+          done
+          ls -l out
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: horseshoe-watch
+          path: out/*.prg
+          retention-days: 90

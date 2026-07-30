@@ -43,6 +43,32 @@ After that it runs itself, every ten minutes, forever. The logbook starts
 growing on day one; the Season's Log wakes at 5 days, records get deeper
 every month, and "this day last year" lights up in a year.
 
+## Keeping it on time
+
+GitHub's `schedule` event is best-effort and it does not keep a ten-minute
+promise. Measured on 30 July: of roughly 620 firings requested since the repo
+went up, GitHub delivered about a dozen — near two percent. Every run that did
+fire succeeded in about eighty seconds. Nothing is wrong with the workflow;
+the cron simply is not delivered. Off-round minutes did not help.
+
+So the cadence comes from outside. Any free scheduler that can make an HTTPS
+POST will do — [cron-job.org](https://cron-job.org) takes two minutes:
+
+1. Make a fine-grained personal access token scoped to this repository only,
+   with **Actions: Read and write**. Nothing else.
+2. New cron job, every 10 minutes:
+
+   - **URL** `https://api.github.com/repos/horseshoestation/horseshoe-station/actions/workflows/render.yml/dispatches`
+   - **Method** POST
+   - **Headers** `Authorization: Bearer YOUR_TOKEN`,
+     `Accept: application/vnd.github+json`
+   - **Body** `{"ref":"main"}`
+
+   A success looks like HTTP 204 with an empty body.
+
+The workflow keeps a twice-hourly cron as a backstop, so if the pinger dies the
+frame goes stale by half an hour rather than by a day.
+
 ## Phone shortcut
 
 The hosted dashboard holds **no keys** — you carry them in the link itself
@@ -74,6 +100,13 @@ Nederland mining flavor in its veins. Point the online-screensaver hack at
 `https://YOURUSERNAME.github.io/horseshoe-station/kindle.png`
 and set its refresh to 6 hours. (Jailbreak walkthrough comes separately —
 firmware 5.19.2 uses SpringBreak; do not update the Kindle's firmware.)
+
+## The wrist
+
+`garmin/` holds a watch face and a glance-plus-app for the epix (Gen 2), fed by
+`watch.json` — the same reading the frame draws, about 800 bytes, published
+beside it every ten minutes. The watch holds no keys. See `garmin/README.md`
+for building and sideloading.
 
 ## The pages
 

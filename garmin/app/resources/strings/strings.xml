@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string id="AppName">Horseshoe Station</string>
+    <string id="PaperModeTitle">Paper mode</string>
+    <string id="PaperModePrompt">Print the pages on cream paper, exactly as the wall frame reads.</string>
+</resources>

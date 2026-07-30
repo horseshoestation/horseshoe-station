@@ -125,8 +125,12 @@
 "use strict";
 /* ================= CONFIG ================= */
 var CFG = {
-  apiKey: "4d8b697245f94249b75b8f3a9ebd3afd227a3e76ae6f4eaa9f061979e35fdefc",
-  appKey: "8d5cae1285b948a383887eb8422eccc9a970e7d1cd6e4393966324e23337b082",
+  // No keys live in this file. The renderer injects its data and never calls
+  // the API from the page; a browser using live mode supplies them in the URL
+  // fragment, the way dashboard.html does. (Keys were hardcoded here until
+  // 2026-07-30 in a public repo — the pair that was exposed has been retired.)
+  apiKey: "",
+  appKey: "",
   mac: "34:5F:45:66:8E:40",
   lat: 39.9693, lon: -105.4951,
   tz: "America/Denver",

@@ -1,0 +1,6 @@
+project.manifest = manifest.xml
+
+# The face and the app draw the same station with the same ink, so the palette,
+# the feed contract and the drawing primitives live one directory up.
+base.sourcePath = source;../shared
+base.resourcePath = resources
