@@ -63,10 +63,17 @@
     }
   }
 
+  // The panel-grade PNG is 800x480 dithered down to six inks. An iPad stretches
+  // that to roughly three times its size and magnifies the dither grain along
+  // with it, which is what made this look pixelated. The renderer now also
+  // publishes a 2400px full-colour copy for screens; fall back to the panel
+  // version if a deploy predates it.
   function show(i){
     idx = (i + pages.length) % pages.length;
     var back = 1 - front;
     var next = imgs[back];
+    var stamp = Date.now();
+    var base = 'page-' + pages[idx];
     var loader = new Image();
     loader.onload = function(){
       next.src = loader.src;
@@ -75,7 +82,10 @@
       front = back;
       blink();
     };
-    loader.src = 'page-' + pages[idx] + '.png?t=' + Date.now();
+    loader.onerror = function(){
+      if (loader.src.indexOf('@3x') !== -1) { loader.src = base + '.png?t=' + stamp; }
+    };
+    loader.src = base + '@3x.png?t=' + stamp;
   }
 
   function advance(){ if (!paused) show(idx + 1); }

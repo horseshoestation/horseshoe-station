@@ -1,10 +1,21 @@
 name: Turn the page
 on:
+  # Kept as a backstop, not as the plan. Measured 2026-07-30: of roughly 620
+  # firings requested since the repo went up on 25 July, GitHub delivered about
+  # a dozen — call it two percent. Moving to off-round minutes did not help.
+  # GitHub's shared cron is best-effort and drops most sub-hourly schedules.
+  # The real cadence comes from an external pinger calling workflow_dispatch;
+  # see README, "Keeping it on time".
   schedule:
-    # Off-round minutes: GitHub's shared cron drops most */10 firings at
-    # :00/:10/:20 when every other repo asks for the same slots.
-    - cron: "4,14,24,34,44,54 * * * *"
+    - cron: "4,34 * * * *"
   workflow_dispatch: {}
+  # Alternative entry point for pingers that find repository_dispatch easier:
+  #   curl -X POST -H "Authorization: Bearer $PAT" \
+  #     -H "Accept: application/vnd.github+json" \
+  #     https://api.github.com/repos/horseshoestation/horseshoe-station/dispatches \
+  #     -d '{"event_type":"render"}'
+  repository_dispatch:
+    types: [render]
 
 permissions:
   contents: write
@@ -18,6 +29,10 @@ concurrency:
 jobs:
   render:
     runs-on: ubuntu-latest
+    # A normal run is about eighty seconds. Without this a single wedged run
+    # would sit in the concurrency group for GitHub's default six hours and
+    # every firing behind it would be dropped.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -32,13 +47,23 @@ jobs:
           AWN_API_KEY: ${{ secrets.AWN_API_KEY }}
           AWN_APP_KEY: ${{ secrets.AWN_APP_KEY }}
         run: python renderer/build.py
+      # The logbook is recomputed from station history every run, so losing one
+      # commit costs nothing. A rejected push must never take the deploy down
+      # with it — that would blank the frame over a bookkeeping problem.
       - name: Keep the logbook
+        continue-on-error: true
         run: |
           git config user.name "horseshoe-station"
           git config user.email "actions@users.noreply.github.com"
           git add data/logbook.json
-          git diff --cached --quiet || git commit -m "logbook: $(date -u +%F)"
-          git push
+          git diff --cached --quiet && exit 0
+          git commit -m "logbook: $(date -u +%F)"
+          for i in 1 2 3; do
+            git push && exit 0
+            echo "push rejected, rebasing on origin/main (attempt $i)"
+            git pull --rebase --autostash origin main || break
+          done
+          echo "could not push the logbook; the render still deploys"
       - name: Upload site
         uses: actions/upload-pages-artifact@v3
         with:

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<settings>
+    <setting propertyKey="@Properties.paperMode" title="@Strings.PaperModeTitle"
+             prompt="@Strings.PaperModePrompt">
+        <settingConfig type="boolean" />
+    </setting>
+</settings>

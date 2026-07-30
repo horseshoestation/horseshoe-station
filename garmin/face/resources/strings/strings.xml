@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string id="AppName">Ship’s Glass</string>
+    <string id="PaperModeTitle">Paper mode</string>
+    <string id="PaperModePrompt">Print the face on cream paper, exactly as the wall frame reads. Costs battery on AMOLED.</string>
+</resources>

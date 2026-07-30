@@ -245,7 +245,12 @@ def render_pages(data, cycle):
     targets = list(cycle)
     with sync_playwright() as pw:
         browser = pw.chromium.launch()
-        page = browser.new_page(viewport={"width": 800, "height": 480})
+        # Render at 3x and take two shots of the same load: a full-resolution
+        # one for screens, and a CSS-pixel one for the panel. The e-ink version
+        # is unchanged in size but now supersampled before it is dithered,
+        # which is if anything slightly kinder to the six inks.
+        page = browser.new_page(viewport={"width": 800, "height": 480},
+                                device_scale_factor=3)
         def shoot(page_id, out_name, nowarn=False):
             d = dict(data); d["page"] = "__nowarn__" if nowarn and page_id is None else page_id
             html = tpl.replace("__DATA__", json.dumps(d))
@@ -253,8 +258,16 @@ def render_pages(data, cycle):
             tmp.write_text(html)
             page.goto("file://" + str(tmp))
             page.wait_for_timeout(700)
+
+            # screens: 2400x1440, full colour, no dither. An iPad showing the
+            # panel's six-ink dithered PNG was upscaling it about three times
+            # and magnifying the dither grain along with it.
+            hi = SITE / (out_name[:-4] + "@3x.png")
+            page.screenshot(path=str(hi), scale="device")
+
+            # the panel: 800x480, quantised to Spectra 6
             raw = SITE / ("_" + out_name)
-            page.screenshot(path=str(raw))
+            page.screenshot(path=str(raw), scale="css")
             im = Image.open(raw).convert("RGB")
             im = im.quantize(palette=pimg, dither=Image.FLOYDSTEINBERG).convert("RGB")
             im.save(SITE / out_name, optimize=True)
@@ -274,12 +287,23 @@ def stage_site(data, cycle):
         "aqi": data["aqi"], "cycle": cycle, "current": data["current"],
         "alert": (data["alerts"][0]["event"] if data["alerts"] else None),
     }))
+    # the wrist gets its own small, flat feed — no keys, no arithmetic on-watch
+    try:
+        sys.path.insert(0, str(ROOT / "renderer"))
+        from watch_build import write_watch
+        _, nbytes = write_watch(SITE, data)
+        print("watch.json:", nbytes, "bytes")
+    except Exception as e:
+        print("watch feed skipped:", e)
     dash = ROOT / "renderer" / "dashboard.html"
     if dash.exists():
         (SITE / "dashboard.html").write_text(dash.read_text())
+    # The contact sheet points at the screen-grade renders too; it is only ever
+    # read on a screen, and at 640 CSS px a Retina display wants 1280+ real ones.
     (SITE / "index.html").write_text(
-        "<html><body style='background:#2c1f15;text-align:center;padding:30px;font-family:serif'>"
-        + "".join(f"<img src='page-{p}.png?t={data['now']}' style='width:640px;max-width:96vw;margin:12px;box-shadow:0 10px 30px #0008'><br>" for p in cycle)
+        "<html><head><meta name='viewport' content='width=device-width,initial-scale=1'></head>"
+        "<body style='background:#2c1f15;text-align:center;padding:30px;font-family:serif'>"
+        + "".join(f"<img src='page-{p}@3x.png?t={data['now']}' style='width:640px;max-width:96vw;margin:12px;box-shadow:0 10px 30px #0008'><br>" for p in cycle)
         + "</body></html>")
 
 def main():
