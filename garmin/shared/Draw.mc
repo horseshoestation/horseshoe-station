@@ -71,6 +71,79 @@ module Draw {
         dc.fillPolygon([[cx, y - 3], [cx + 3, y], [cx, y + 3], [cx - 3, y]]);
     }
 
+    // ---- the mountains ----------------------------------------------------
+
+    // The condition ladder: the same five pressure cuts the frame's Dutch
+    // scale reads, spoken the way the high country says them.
+    const LADDER = ["STORM", "UNSETTLED", "SHIFTING", "FAIR", "SETTLED"];
+
+    function ladderWord(seg) {
+        if (seg == null || seg < 0 || seg > 4) { return "SHIFTING"; }
+        return LADDER[seg];
+    }
+
+    // The Divide's profile, echoing the Chart page: the Arapahos' double
+    // summit left of centre, Neva's shoulder, the long fall to the canyon.
+    // 416 px reference coordinates; 82 is the valley floor.
+    const RIDGE = [[58, 82], [84, 74], [104, 60], [116, 67], [132, 54],
+                   [144, 62], [166, 70], [190, 64], [212, 72], [242, 66],
+                   [268, 75], [300, 71], [330, 78], [358, 82]];
+
+    // baseY sits the valley floor; amp compresses the relief (1.0 = full).
+    // snow fills the two big summits, for the months that earn it.
+    function ridgeline(dc, s, baseY, amp, color, snow) {
+        dc.setColor(color, Graphics.COLOR_TRANSPARENT);
+        dc.setPenWidth(2);
+        var px = null;
+        var py = null;
+        for (var i = 0; i < RIDGE.size(); i += 1) {
+            var x = (RIDGE[i][0] * s).toNumber();
+            var y = ((baseY - (82 - RIDGE[i][1]) * amp) * s).toNumber();
+            if (px != null) { dc.drawLine(px, py, x, y); }
+            px = x;
+            py = y;
+        }
+        if (snow) {
+            // apex index, left shoulder, right shoulder
+            var caps = [[2, 1, 3], [4, 3, 5]];
+            for (var c = 0; c < 2; c += 1) {
+                var a = RIDGE[caps[c][0]];
+                var l = RIDGE[caps[c][1]];
+                var r = RIDGE[caps[c][2]];
+                var pts = new [3];
+                pts[0] = [((l[0] + (a[0] - l[0]) * 0.45) * s).toNumber(),
+                          ((baseY - (82 - (l[1] + (a[1] - l[1]) * 0.45)) * amp) * s).toNumber()];
+                pts[1] = [(a[0] * s).toNumber(),
+                          ((baseY - (82 - a[1]) * amp) * s).toNumber()];
+                pts[2] = [((r[0] + (a[0] - r[0]) * 0.45) * s).toNumber(),
+                          ((baseY - (82 - (r[1] + (a[1] - r[1]) * 0.45)) * amp) * s).toNumber()];
+                dc.fillPolygon(pts);
+            }
+        }
+    }
+
+    // The sun's travel from rise to set, dotted, with the sun at frac along
+    // it. frac outside 0..1 (or null) means night: draw the road, not the
+    // traveller.
+    function sunArc(dc, s, frac, peakY, baseY, dotColor, sunColor) {
+        var x0 = (84 * s).toNumber();
+        var x1 = (332 * s).toNumber();
+        var steps = 39;
+        dc.setColor(dotColor, Graphics.COLOR_TRANSPARENT);
+        for (var i = 0; i <= steps; i += 3) {
+            var t = i.toFloat() / steps;
+            var x = x0 + ((x1 - x0) * t).toNumber();
+            var y = ((baseY - (baseY - peakY) * Math.sin(t * Math.PI)) * s).toNumber();
+            dc.fillCircle(x, y, 1);
+        }
+        if (frac != null && frac >= 0.0 && frac <= 1.0) {
+            var sx = x0 + ((x1 - x0) * frac).toNumber();
+            var sy2 = ((baseY - (baseY - peakY) * Math.sin(frac * Math.PI)) * s).toNumber();
+            dc.setColor(sunColor, Graphics.COLOR_TRANSPARENT);
+            dc.fillCircle(sx, sy2, (5 * s).toNumber());
+        }
+    }
+
     // ---- the glass --------------------------------------------------------
 
     function trendArrow(trend) {

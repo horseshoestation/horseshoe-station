@@ -42,8 +42,8 @@ module Feed {
     const FACE_KEYS = [
         "t", "temp", "feels", "hum", "hi", "lo",
         "wind", "gust", "dirn", "maxgust",
-        "bar", "trend", "trendw", "dutchw",
-        "rain", "aqi", "fire", "alert", "sr", "ss"
+        "bar", "trend", "trendw", "dutch", "dutchw",
+        "rain", "uv", "aqi", "fire", "alert", "sr", "ss"
     ];
 
     function requestOptions() {

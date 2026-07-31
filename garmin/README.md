@@ -3,10 +3,17 @@
 Two Connect IQ projects for the Garmin epix (Gen 2), reading the same station
 the wall frame reads:
 
-- **`face/`** — a watch face. Time, temperature, wind, the glass and its trend,
-  the Dutch scale word, and whatever warning outranks the rest.
-- **`app/`** — a glance you swipe past, opening into four pages: The Glass,
-  The Wind, the Deck Log, The Almanack.
+The wrist speaks mountain, not ship: the wall frame keeps its nautical soul,
+but the watch goes hiking in summer and skiing in winter.
+
+- **`face/`** — a watch face. Time under the Divide's own ridgeline with the
+  sun riding its true arc between today's rise and set; temperature, wind, the
+  barometer and its trend; the condition ladder (STORM to SETTLED, the same
+  pressure cuts as the frame's Dutch scale); and a seasonal footer — UV and
+  burn time May through October, daylight remaining November through April,
+  when the summits also take their snowcaps. Any warning outranks all of it.
+- **`app/`** — a glance you swipe past, opening into four pages: Storm Watch,
+  The Wind, Trail Log, Sun & Sky.
 
 `shared/` holds the palette, the feed contract and the drawing primitives, and
 is on the source path of both.

@@ -93,17 +93,18 @@ class PagesView extends WatchUi.View {
     hidden function py(v, s) { return (v * s).toNumber(); }
 
     hidden function title() {
-        if (page == PAGE_GLASS) { return "The Glass"; }
+        if (page == PAGE_GLASS) { return "Storm Watch"; }
         if (page == PAGE_WIND)  { return "The Wind"; }
-        if (page == PAGE_LOG)   { return "Deck Log"; }
-        return "The Almanack";
+        if (page == PAGE_LOG)   { return "Trail Log"; }
+        return "Sun & Sky";
     }
 
     hidden function drawChrome(dc, cx, s) {
         dc.setColor(Palette.blue(), Graphics.COLOR_TRANSPARENT);
         Draw.spacedText(dc, cx, py(48, s), Graphics.FONT_XTINY, title(), 4,
                         Graphics.TEXT_JUSTIFY_CENTER);
-        Draw.ornament(dc, cx, py(78, s), (104 * s).toNumber(), Palette.grid(), Palette.red());
+        // the Divide again, compressed to a hairline horizon under the title
+        Draw.ridgeline(dc, s, 84, 0.55, Palette.grid(), false);
     }
 
     hidden function drawDots(dc, cx, s) {
@@ -171,14 +172,16 @@ class PagesView extends WatchUi.View {
 
         // The scale and its word sit high enough to clear the trace's header
         // row, which lands at 290.
+        var seg = Feed.num(data, "dutch");
+        if (seg == null) { seg = segFromWord(Feed.num(data, "dutchw")); }
         var w = (224 * s).toNumber();
-        Draw.dutchScale(dc, cx - w / 2, py(250, s), w, segFromWord(Feed.num(data, "dutchw")),
+        Draw.dutchScale(dc, cx - w / 2, py(250, s), w, seg,
                         Palette.grid(), Palette.red(), Graphics.FONT_XTINY);
         dc.setColor(Palette.ink(), Graphics.COLOR_TRANSPARENT);
         Draw.spacedText(dc, cx, py(264, s), Graphics.FONT_XTINY,
-                        strOr(Feed.num(data, "dutchw"), ""), 3, Graphics.TEXT_JUSTIFY_CENTER);
+                        Draw.ladderWord(seg), 3, Graphics.TEXT_JUSTIFY_CENTER);
 
-        traceBox(dc, cx, s, Feed.num(data, "bt"), "Glass - 24 h", Palette.ink(), 306);
+        traceBox(dc, cx, s, Feed.num(data, "bt"), "Pressure - 24 h", Palette.ink(), 306);
     }
 
     hidden function drawWind(dc, cx, s) {
@@ -220,7 +223,7 @@ class PagesView extends WatchUi.View {
         row(dc, s, y + step * 3, "High / low",
             Feed.whole(Feed.num(data, "hi")) + "° / " + Feed.whole(Feed.num(data, "lo")) + "°",
             Palette.blue());
-        row(dc, s, y + step * 4, "Glasshouse",
+        row(dc, s, y + step * 4, "Back home",
             Feed.whole(Feed.num(data, "tin")) + "°  " + Feed.whole(Feed.num(data, "hin")) + "%",
             Palette.dim());
 

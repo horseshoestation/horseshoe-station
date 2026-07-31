@@ -6,22 +6,24 @@ using Toybox.System;
 using Toybox.Time;
 using Toybox.WatchUi;
 
-// The Ship's Glass, at wrist scale.
+// The station, at wrist scale — mountain edition.
 //
 //        HORSESHOE STATION
-//        ──────── ◆ ────────
+//         .·˙˙☀˙˙·.
+//        ▁▂/\▄/\▂▁▂▁          ← the Divide, sun on its true arc
 //              10:42
-//        THU 30 JUL · ↑5:58 ↓20:17
+//        THU 30 JUL · 5:58 - 20:17
 //        ──────────────────
-//    WIND        61°        GLASS
+//    WIND        61°        BARO
 //   WSW 11      feels 61    29.94 ↗
-//    g 23                   RISING
-//        ─ STORM|REGEN|…|BESTENDIG ─
-//              MOOI WEER
-//         STAGE 2 FIRE RESTRICTIONS
+//    g 23
+//        ─ STORM|…|SETTLED ─
+//              FAIR · RISING
+//        UV 9 - BURN 15 MIN        ← winter: daylight left
 //
-// Everything above the rule is the watch's own; everything below it came from
-// the station on Horseshoe Place.
+// The ridge is the Chart page's Divide; snowcaps November through April.
+// Everything above the rule is the watch's own; everything below it came
+// from the station on Horseshoe Place.
 class HorseshoeFaceView extends WatchUi.WatchFace {
 
     hidden var lowPower = false;
@@ -56,7 +58,7 @@ class HorseshoeFaceView extends WatchUi.WatchFace {
         // scale the fixed 416 px design to whatever the device actually is
         var s = h / 416.0;
 
-        drawHeading(dc, cx, s);
+        drawHeading(dc, cx, s, d);
         drawTime(dc, cx, s);
         drawAlmanacLine(dc, cx, s, d);
 
@@ -79,12 +81,32 @@ class HorseshoeFaceView extends WatchUi.WatchFace {
         return (v * s).toNumber();
     }
 
-    hidden function drawHeading(dc, cx, s) {
+    // November through April the summits wear snow and the sun rides low —
+    // the same months the skis come out.
+    hidden function isWinter() {
+        var m = Time.Gregorian.info(Time.now(), Time.FORMAT_SHORT).month;
+        return m >= 11 || m <= 4;
+    }
+
+    // Where the sun stands between today's rise and set, 0..1, or null when
+    // the feed has no sun times. Night falls outside the range and sunArc
+    // simply leaves the traveller off the road.
+    hidden function sunFrac(d) {
+        var sr = Feed.num(d, "sr");
+        var ss = Feed.num(d, "ss");
+        if (sr == null || ss == null || ss <= sr) { return null; }
+        var now = Time.now().value();
+        return (now - sr / 1000).toFloat() / ((ss - sr) / 1000).toFloat();
+    }
+
+    hidden function drawHeading(dc, cx, s, d) {
         dc.setColor(Palette.blue(), Graphics.COLOR_TRANSPARENT);
-        Draw.spacedText(dc, cx, sy(44, s), Graphics.FONT_XTINY,
+        Draw.spacedText(dc, cx, sy(30, s), Graphics.FONT_XTINY,
                         "Horseshoe Station", 3, Graphics.TEXT_JUSTIFY_CENTER);
-        Draw.ornament(dc, cx, sy(74, s), (108 * s).toNumber(),
-                      Palette.grid(), Palette.red());
+        var winter = isWinter();
+        Draw.sunArc(dc, s, sunFrac(d), winter ? 58 : 46, 78,
+                    Palette.grid(), Palette.gold());
+        Draw.ridgeline(dc, s, 82, 1.0, Palette.ink(), winter);
     }
 
     hidden function drawTime(dc, cx, s) {
@@ -159,9 +181,9 @@ class HorseshoeFaceView extends WatchUi.WatchFace {
                     "g " + Feed.whole(Feed.num(d, "gust")),
                     Graphics.TEXT_JUSTIFY_CENTER);
 
-        // right: the glass and where it is going
+        // right: the barometer and where it is going
         dc.setColor(Palette.blue(), Graphics.COLOR_TRANSPARENT);
-        Draw.spacedText(dc, rightX, top, Graphics.FONT_XTINY, "Glass", 2,
+        Draw.spacedText(dc, rightX, top, Graphics.FONT_XTINY, "Baro", 2,
                         Graphics.TEXT_JUSTIFY_CENTER);
         dc.setColor(Palette.ink(), Graphics.COLOR_TRANSPARENT);
         dc.drawText(rightX, top + (18 * s).toNumber(), Graphics.FONT_TINY,
@@ -172,18 +194,17 @@ class HorseshoeFaceView extends WatchUi.WatchFace {
                    trend, Palette.trendColor(trend));
     }
 
-    // The old glass words, and the pointer that says which one we are living in.
+    // The condition ladder, and the pointer that says which rung we live on.
     hidden function drawGlassWord(dc, cx, s, d) {
-        var seg = segFromWord(Feed.num(d, "dutchw"));
+        var seg = Feed.num(d, "dutch");
+        if (seg == null) { seg = segFromWord(Feed.num(d, "dutchw")); }
         var w = (216 * s).toNumber();
         Draw.dutchScale(dc, cx - w / 2, sy(288, s), w, seg,
                         Palette.grid(), Palette.red(), Graphics.FONT_XTINY);
 
-        var word = Feed.num(d, "dutchw");
-        if (word == null) { word = ""; }
         dc.setColor(Palette.ink(), Graphics.COLOR_TRANSPARENT);
-        Draw.spacedText(dc, cx, sy(304, s), Graphics.FONT_XTINY, word, 3,
-                        Graphics.TEXT_JUSTIFY_CENTER);
+        Draw.spacedText(dc, cx, sy(304, s), Graphics.FONT_XTINY,
+                        Draw.ladderWord(seg), 3, Graphics.TEXT_JUSTIFY_CENTER);
 
         var tw = Feed.num(d, "trendw");
         if (tw != null) {
@@ -193,7 +214,9 @@ class HorseshoeFaceView extends WatchUi.WatchFace {
         }
     }
 
-    // A live warning outranks the fire stage, which outranks the rain total.
+    // A live warning outranks the fire stage, which outranks the season's own
+    // line: UV and burn time above treeline in summer, daylight left on the
+    // snow in winter. Rain is the fallback when nothing else has a claim.
     hidden function drawFooter(dc, cx, s, d) {
         var alert = Feed.num(d, "alert");
         var fire = Feed.num(d, "fire");
@@ -206,9 +229,25 @@ class HorseshoeFaceView extends WatchUi.WatchFace {
         } else if (fire != null) {
             text = fire;
             color = Palette.gold();
+        } else if (isWinter()) {
+            var ss = Feed.num(d, "ss");
+            var left = (ss != null) ? (ss / 1000 - Time.now().value()) : null;
+            if (left != null && left > 0) {
+                var hrs = left / 3600;
+                var mins = (left % 3600) / 60;
+                text = "daylight " + hrs.format("%d") + " h " + mins.format("%02d") + " m left";
+                color = Palette.gold();
+            }
         } else {
-            var rain = Feed.num(d, "rain");
-            text = "rain " + Feed.twoDp(rain) + " in";
+            var uv = Feed.num(d, "uv");
+            if (uv != null && uv >= 3) {
+                var burn = (uv >= 11) ? 10 : (uv >= 8) ? 15 : (uv >= 6) ? 25 : 45;
+                text = "UV " + Feed.whole(uv) + " - burn " + burn.format("%d") + " min";
+                color = Palette.gold();
+            }
+        }
+        if (text == null) {
+            text = "rain " + Feed.twoDp(Feed.num(d, "rain")) + " in";
             color = Palette.blue();
         }
 
