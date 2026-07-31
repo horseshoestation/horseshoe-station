@@ -16,12 +16,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-go@v5
-        with:
-          go-version: stable
-
+      # The prebuilt release, pinned and checksum-verified. (go install put the
+      # binary outside the runner's PATH and the build died on command-not-found;
+      # a fixed artifact is also faster and cannot drift under us.)
       - name: Install the Connect IQ SDK manager
-        run: go install github.com/lindell/connect-iq-sdk-manager-cli@latest
+        run: |
+          curl -sSL -o /tmp/ciq.tar.gz \
+            https://github.com/lindell/connect-iq-sdk-manager-cli/releases/download/v0.8.4/connect-iq-sdk-manager-cli_0.8.4_Linux_x86_64.tar.gz
+          echo "5d57b8f9cfcd02d3b3f48e19d6daca0480e4c6f627926f15d8617ef8a6f57e0b  /tmp/ciq.tar.gz" | sha256sum -c -
+          tar -xzf /tmp/ciq.tar.gz -C /tmp
+          sudo install /tmp/connect-iq-sdk-manager /usr/local/bin/connect-iq-sdk-manager
 
       - name: Fetch the SDK and the epix device files
         env:
