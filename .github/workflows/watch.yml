@@ -33,7 +33,7 @@ jobs:
           GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
         run: |
           connect-iq-sdk-manager agreement accept \
-            --acceptance-hash="${{ secrets.CIQ_AGREEMENT_HASH }}"
+            --agreement-hash="${{ secrets.CIQ_AGREEMENT_HASH }}"
           connect-iq-sdk-manager login
           connect-iq-sdk-manager sdk set '^9'
           echo "$(connect-iq-sdk-manager sdk current-path --bin)" >> "$GITHUB_PATH"
