@@ -143,45 +143,54 @@ class PagesView extends WatchUi.View {
         dc.setColor(Palette.dim(), Graphics.COLOR_TRANSPARENT);
         Draw.spacedText(dc, left, y, Graphics.FONT_XTINY, label, 1, Graphics.TEXT_JUSTIFY_LEFT);
         dc.setColor(valueColor, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(right, y - 2, Graphics.FONT_TINY, value, Graphics.TEXT_JUSTIFY_RIGHT);
+        Draw.textC(dc, right, y, Graphics.FONT_TINY, value, Graphics.TEXT_JUSTIFY_RIGHT);
     }
 
     // ---- the pages --------------------------------------------------------
 
     hidden function drawGlass(dc, cx, s) {
-        var bar = Feed.num(data, "bar");
-        dc.setColor(Palette.ink(), Graphics.COLOR_TRANSPARENT);
-        dc.drawText(cx, py(92, s), Graphics.FONT_NUMBER_MEDIUM, Feed.twoDp(bar),
-                    Graphics.TEXT_JUSTIFY_CENTER);
+        var hX = dc.getFontHeight(Graphics.FONT_XTINY);
+        var hM = dc.getFontHeight(Graphics.FONT_NUMBER_MEDIUM);
+        var pad = (3 * s).toNumber();
 
+        var barC = py(96, s) + hM / 2;
+        dc.setColor(Palette.ink(), Graphics.COLOR_TRANSPARENT);
+        Draw.textC(dc, cx, barC, Graphics.FONT_NUMBER_MEDIUM,
+                   Feed.twoDp(Feed.num(data, "bar")), Graphics.TEXT_JUSTIFY_CENTER);
+
+        var absC = barC + hM / 2 + hX / 2 + pad;
         dc.setColor(Palette.dim(), Graphics.COLOR_TRANSPARENT);
-        Draw.spacedText(dc, cx, py(150, s), Graphics.FONT_XTINY,
+        Draw.spacedText(dc, cx, absC, Graphics.FONT_XTINY,
                         "inches - abs " + Feed.twoDp(Feed.num(data, "barabs")), 1,
                         Graphics.TEXT_JUSTIFY_CENTER);
 
         var trend = Feed.num(data, "trend");
-        Draw.arrow(dc, cx - (56 * s).toNumber(), py(182, s), (28 * s).toNumber(),
+        var rowC = absC + hX + (8 * s).toNumber();
+        Draw.arrow(dc, cx - (60 * s).toNumber(), rowC, (28 * s).toNumber(),
                    trend, Palette.trendColor(trend));
         var tw = Feed.num(data, "trendw");
         if (tw == null) { tw = "Steady"; }
         dc.setColor(Palette.trendColor(trend), Graphics.COLOR_TRANSPARENT);
-        Draw.spacedText(dc, cx + (18 * s).toNumber(), py(172, s), Graphics.FONT_XTINY, tw, 2,
+        Draw.spacedText(dc, cx + (22 * s).toNumber(), rowC, Graphics.FONT_XTINY, tw, 2,
                         Graphics.TEXT_JUSTIFY_CENTER);
 
-        wrapped(dc, cx, py(202, s), Feed.num(data, "verdict"), s, 2);
+        var verdictTop = rowC + hX / 2 + (8 * s).toNumber();
+        dc.setColor(Palette.dim(), Graphics.COLOR_TRANSPARENT);
+        wrapped(dc, cx, verdictTop, Feed.num(data, "verdict"), s, 2);
 
-        // The scale and its word sit high enough to clear the trace's header
-        // row, which lands at 290.
         var seg = Feed.num(data, "dutch");
         if (seg == null) { seg = segFromWord(Feed.num(data, "dutchw")); }
+        var ladderY = verdictTop + (hX - 2) * 2 + (12 * s).toNumber();
         var w = (224 * s).toNumber();
-        Draw.dutchScale(dc, cx - w / 2, py(250, s), w, seg,
+        Draw.dutchScale(dc, cx - w / 2, ladderY, w, seg,
                         Palette.grid(), Palette.red(), Graphics.FONT_XTINY);
+        var wordC = ladderY + (14 * s).toNumber() + hX / 2;
         dc.setColor(Palette.ink(), Graphics.COLOR_TRANSPARENT);
-        Draw.spacedText(dc, cx, py(264, s), Graphics.FONT_XTINY,
+        Draw.spacedText(dc, cx, wordC, Graphics.FONT_XTINY,
                         Draw.ladderWord(seg), 3, Graphics.TEXT_JUSTIFY_CENTER);
 
-        traceBox(dc, cx, s, Feed.num(data, "bt"), "Pressure - 24 h", Palette.ink(), 306);
+        traceBox(dc, cx, s, Feed.num(data, "bt"), "Pressure - 24 h", Palette.ink(),
+                 wordC + hX / 2 + hX + (14 * s).toNumber());
     }
 
     hidden function drawWind(dc, cx, s) {
@@ -189,27 +198,35 @@ class PagesView extends WatchUi.View {
                   Feed.num(data, "rose"), Feed.num(data, "dir"),
                   Palette.grid(), Palette.blue(), Palette.red());
 
-        dc.setColor(Palette.ink(), Graphics.COLOR_TRANSPARENT);
-        dc.drawText(cx, py(244, s), Graphics.FONT_TINY,
-                    Draw.dirName(Feed.num(data, "dir")) + "  "
-                    + Feed.whole(Feed.num(data, "wind")) + "  g "
-                    + Feed.whole(Feed.num(data, "gust")),
-                    Graphics.TEXT_JUSTIFY_CENTER);
+        var hX = dc.getFontHeight(Graphics.FONT_XTINY);
+        var hT = dc.getFontHeight(Graphics.FONT_TINY);
+        var pad = (3 * s).toNumber();
 
+        var dirC = py(240, s) + hT / 2;
+        dc.setColor(Palette.ink(), Graphics.COLOR_TRANSPARENT);
+        Draw.textC(dc, cx, dirC, Graphics.FONT_TINY,
+                   Draw.dirName(Feed.num(data, "dir")) + "  "
+                   + Feed.whole(Feed.num(data, "wind")) + "  g "
+                   + Feed.whole(Feed.num(data, "gust")),
+                   Graphics.TEXT_JUSTIFY_CENTER);
+
+        var forceC = dirC + hT / 2 + hX / 2 + pad;
         dc.setColor(Palette.blue(), Graphics.COLOR_TRANSPARENT);
-        Draw.spacedText(dc, cx, py(276, s), Graphics.FONT_XTINY,
+        Draw.spacedText(dc, cx, forceC, Graphics.FONT_XTINY,
                         "Force " + Feed.whole(Feed.num(data, "bf")) + " - "
                         + strOr(Feed.num(data, "bfw"), ""), 1, Graphics.TEXT_JUSTIFY_CENTER);
 
+        var maxC = forceC + hX + pad;
         dc.setColor(Palette.dim(), Graphics.COLOR_TRANSPARENT);
-        Draw.spacedText(dc, cx, py(294, s), Graphics.FONT_XTINY,
+        Draw.spacedText(dc, cx, maxC, Graphics.FONT_XTINY,
                         "max " + Feed.whole(Feed.num(data, "maxgust")) + " today - "
                         + strOr(Feed.num(data, "prev"), "--") + " prevails", 1,
                         Graphics.TEXT_JUSTIFY_CENTER);
 
         // No header on this one — the page is already called The Wind, and the
         // line above it is using the space a label would want.
-        traceBox(dc, cx, s, Feed.num(data, "gt"), null, Palette.red(), 314);
+        traceBox(dc, cx, s, Feed.num(data, "gt"), null, Palette.red(),
+                 maxC + hX / 2 + (14 * s).toNumber());
     }
 
     hidden function drawLog(dc, cx, s) {
@@ -227,7 +244,7 @@ class PagesView extends WatchUi.View {
             Feed.whole(Feed.num(data, "tin")) + "°  " + Feed.whole(Feed.num(data, "hin")) + "%",
             Palette.dim());
 
-        traceBox(dc, cx, s, Feed.num(data, "tt"), "Temperature - 24 h", Palette.ink(), 306);
+        traceBox(dc, cx, s, Feed.num(data, "tt"), "Temperature - 24 h", Palette.ink(), py(300, s));
     }
 
     hidden function drawAlmanac(dc, cx, s) {
@@ -261,25 +278,31 @@ class PagesView extends WatchUi.View {
     // ---- shared bits ------------------------------------------------------
 
     // label == null draws the trace bare, for pages with no room for a header.
-    hidden function traceBox(dc, cx, s, series, label as Lang.String?, color, top) {
+    // yTop is absolute pixels: pages flow their layout from measured fonts and
+    // hand the trace whatever honest space is left.
+    hidden function traceBox(dc, cx, s, series, label as Lang.String?, color, yTop) {
         if (series == null) { return; }
         var x = cx - (112 * s).toNumber();
         var w = (224 * s).toNumber();
-        var y = py(top, s);
         var h = (40 * s).toNumber();
+        var hX = dc.getFontHeight(Graphics.FONT_XTINY);
+        var y = yTop;
+
+        if (label != null) { y = y + hX + (4 * s).toNumber(); }
 
         var bounds = Draw.trace(dc, series, x, y, w, h, color, 2) as Lang.Array<Lang.Number>?;
         Draw.rule(dc, x, x + w, y + h + 2, Palette.grid());
 
         if (label != null) {
+            var labelC = yTop + hX / 2;
             dc.setColor(Palette.blue(), Graphics.COLOR_TRANSPARENT);
-            Draw.spacedText(dc, x, y - py(16, s), Graphics.FONT_XTINY, label, 1,
+            Draw.spacedText(dc, x, labelC, Graphics.FONT_XTINY, label, 1,
                             Graphics.TEXT_JUSTIFY_LEFT);
             if (bounds != null) {
                 dc.setColor(Palette.dim(), Graphics.COLOR_TRANSPARENT);
-                dc.drawText(x + w, y - py(16, s), Graphics.FONT_XTINY,
-                            bounds[0].format("%d") + "-" + bounds[1].format("%d"),
-                            Graphics.TEXT_JUSTIFY_RIGHT);
+                Draw.textC(dc, x + w, labelC, Graphics.FONT_XTINY,
+                           bounds[0].format("%d") + "-" + bounds[1].format("%d"),
+                           Graphics.TEXT_JUSTIFY_RIGHT);
             }
         }
     }

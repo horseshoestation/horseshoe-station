@@ -16,10 +16,16 @@ module Draw {
     // reason the frame reads as a ship's log rather than a dashboard. So we
     // set them a glyph at a time. Cheap: these strings are five to twelve
     // characters and only redraw on the minute.
+    // y is the vertical CENTRE of the line, matching preview.py's "mm" anchor.
+    // Connect IQ's drawText anchors at the top, and the real device fonts run
+    // taller than the design guessed — on hardware that skew stacked lines on
+    // top of each other. Centring here, and spacing call sites by measured
+    // font heights, makes overlap impossible rather than merely unlikely.
     function spacedText(dc, x, y, font, text, extra, justify) {
         var chars = text.toUpper();
         var n = chars.length();
         if (n == 0) { return 0; }
+        y = y - dc.getFontHeight(font) / 2;
 
         var widths = new [n];
         var total = 0;
@@ -42,6 +48,11 @@ module Draw {
             cx += widths[i] + extra;
         }
         return total;
+    }
+
+    // drawText with y as the vertical centre, like preview.py's anchor="mm".
+    function textC(dc, x, y, font, text, justify) {
+        dc.drawText(x, y - dc.getFontHeight(font) / 2, font, text, justify);
     }
 
     // A label above a value, the way every cell on the frame is set.

@@ -39,8 +39,12 @@ class HorseshoeGlanceView extends WatchUi.GlanceView {
         dc.setColor(Graphics.COLOR_TRANSPARENT, Graphics.COLOR_TRANSPARENT);
         dc.clear();
 
+        // Three rows spaced by the fonts the device actually has: the strip is
+        // only ~60 px tall and guessed offsets overlapped on real hardware.
         var h = dc.getHeight();
         var pad = 4;
+        var hX = dc.getFontHeight(Graphics.FONT_XTINY);
+        var hT = dc.getFontHeight(Graphics.FONT_TINY);
 
         dc.setColor(Palette.D_BLUE, Graphics.COLOR_TRANSPARENT);
         dc.drawText(pad, 0, Graphics.FONT_XTINY, "HORSESHOE STATION",
@@ -48,7 +52,7 @@ class HorseshoeGlanceView extends WatchUi.GlanceView {
 
         if (data == null) {
             dc.setColor(Palette.D_DIM, Graphics.COLOR_TRANSPARENT);
-            dc.drawText(pad, h / 2, Graphics.FONT_TINY, "awaiting the glass",
+            dc.drawText(pad, hX, Graphics.FONT_TINY, "awaiting the glass",
                         Graphics.TEXT_JUSTIFY_LEFT);
             return;
         }
@@ -58,8 +62,9 @@ class HorseshoeGlanceView extends WatchUi.GlanceView {
                  + "g" + Feed.whole(Feed.num(data, "gust")) + "  "
                  + Feed.twoDp(Feed.num(data, "bar"));
 
+        var lineTop = hX - 2;
         dc.setColor(Palette.D_INK, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(pad, h / 2 - 2, Graphics.FONT_TINY, line, Graphics.TEXT_JUSTIFY_LEFT);
+        dc.drawText(pad, lineTop, Graphics.FONT_TINY, line, Graphics.TEXT_JUSTIFY_LEFT);
 
         var trend = Feed.num(data, "trend");
         var tw = Feed.num(data, "trendw");
@@ -71,6 +76,8 @@ class HorseshoeGlanceView extends WatchUi.GlanceView {
         } else {
             dc.setColor(Palette.trendColorDark(trend), Graphics.COLOR_TRANSPARENT);
         }
-        dc.drawText(pad, h - 22, Graphics.FONT_XTINY, tw, Graphics.TEXT_JUSTIFY_LEFT);
+        var thirdTop = lineTop + hT - 2;
+        if (thirdTop + hX > h) { thirdTop = h - hX; }
+        dc.drawText(pad, thirdTop, Graphics.FONT_XTINY, tw, Graphics.TEXT_JUSTIFY_LEFT);
     }
 }
