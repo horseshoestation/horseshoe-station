@@ -14,6 +14,10 @@
             <iq:product id="epix2pro51mm"/>
         </iq:products>
         <iq:permissions>
+            <!-- Background: not used by the app itself, but the shared Feed
+                 module is background-annotated for the face's service, and the
+                 compiler requires the permission wherever that code builds. -->
+            <iq:uses-permission id="Background"/>
             <iq:uses-permission id="Communications"/>
         </iq:permissions>
         <iq:languages>
