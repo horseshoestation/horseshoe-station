@@ -75,7 +75,7 @@ class HorseshoeFaceView extends WatchUi.WatchFace {
             return;
         }
 
-        y = drawDeckLog(dc, cx, s, d, y + (14 * s).toNumber());
+        y = drawDeckLog(dc, cx, s, d, y + (10 * s).toNumber());
         y = drawGlassWord(dc, cx, s, d, y);
         drawFooter(dc, cx, s, d, y);
     }
@@ -104,9 +104,24 @@ class HorseshoeFaceView extends WatchUi.WatchFace {
     }
 
     hidden function drawHeading(dc, cx, s, d) {
+        // The circle is narrow this high up: measure the title against the
+        // chord at its own height and tighten the letter-spacing until it
+        // fits. Spaced at 3 it lost both ends to the bezel.
+        var title = "HORSESHOE STATION";
+        var hX = dc.getFontHeight(Graphics.FONT_XTINY);
+        var r = dc.getWidth() / 2;
+        var dy = r - (sy(30, s) - hX / 2);
+        var half = Math.sqrt((r * r - dy * dy).toFloat()).toNumber();
+        var room = 2 * half - (10 * s).toNumber();
+        var extra = 3;
+        while (extra > 0
+               && dc.getTextWidthInPixels(title, Graphics.FONT_XTINY)
+                  + extra * (title.length() - 1) > room) {
+            extra -= 1;
+        }
         dc.setColor(Palette.blue(), Graphics.COLOR_TRANSPARENT);
         Draw.spacedText(dc, cx, sy(30, s), Graphics.FONT_XTINY,
-                        "Horseshoe Station", 3, Graphics.TEXT_JUSTIFY_CENTER);
+                        title, extra, Graphics.TEXT_JUSTIFY_CENTER);
         var winter = isWinter();
         Draw.sunArc(dc, s, sunFrac(d), winter ? 58 : 46, 78,
                     Palette.grid(), Palette.gold());
@@ -130,8 +145,11 @@ class HorseshoeFaceView extends WatchUi.WatchFace {
                    Graphics.TEXT_JUSTIFY_CENTER);
 
         if (!suffix.equals("")) {
+            // beside the numerals, wherever they actually end — a fixed
+            // offset parked AM on top of the last digit
+            var halfW = dc.getTextWidthInPixels(text, Graphics.FONT_NUMBER_HOT) / 2;
             dc.setColor(Palette.dim(), Graphics.COLOR_TRANSPARENT);
-            Draw.textC(dc, cx + (88 * s).toNumber(), centre + (14 * s).toNumber(),
+            Draw.textC(dc, cx + halfW + (4 * s).toNumber(), centre + (14 * s).toNumber(),
                        Graphics.FONT_XTINY, suffix, Graphics.TEXT_JUSTIFY_LEFT);
         }
         return centre + dc.getFontHeight(Graphics.FONT_NUMBER_HOT) / 2;
@@ -164,7 +182,7 @@ class HorseshoeFaceView extends WatchUi.WatchFace {
         var hX = dc.getFontHeight(Graphics.FONT_XTINY);
         var hT = dc.getFontHeight(Graphics.FONT_TINY);
         var hM = dc.getFontHeight(Graphics.FONT_NUMBER_MEDIUM);
-        var pad = (3 * s).toNumber();
+        var pad = (2 * s).toNumber();
 
         var labelC = top + hX / 2;
         var valueC = labelC + hX / 2 + hT / 2 + pad;
@@ -223,26 +241,20 @@ class HorseshoeFaceView extends WatchUi.WatchFace {
         var seg = Feed.num(d, "dutch");
         if (seg == null) { seg = segFromWord(Feed.num(d, "dutchw")); }
 
-        var ladderY = top + (12 * s).toNumber();
+        var ladderY = top + (8 * s).toNumber();
         var w = (216 * s).toNumber();
         Draw.dutchScale(dc, cx - w / 2, ladderY, w, seg,
                         Palette.grid(), Palette.red(), Graphics.FONT_XTINY);
 
         // the pointer under the scale reaches ladderY + 12
+        // One word only. The trend word came off the face: the arrow beside
+        // BARO already tells that story, and its sentence lives on Storm
+        // Watch. The line it freed is what lets the footer back on the glass.
         var wordC = ladderY + (14 * s).toNumber() + hX / 2;
-        dc.setColor(Palette.ink(), Graphics.COLOR_TRANSPARENT);
+        dc.setColor(Palette.trendColor(Feed.num(d, "trend")), Graphics.COLOR_TRANSPARENT);
         Draw.spacedText(dc, cx, wordC, Graphics.FONT_XTINY,
                         Draw.ladderWord(seg), 3, Graphics.TEXT_JUSTIFY_CENTER);
-
-        var trendC = wordC;
-        var tw = Feed.num(d, "trendw");
-        if (tw != null) {
-            trendC = wordC + hX + (1 * s).toNumber();
-            dc.setColor(Palette.trendColor(Feed.num(d, "trend")), Graphics.COLOR_TRANSPARENT);
-            Draw.spacedText(dc, cx, trendC, Graphics.FONT_XTINY, tw, 2,
-                            Graphics.TEXT_JUSTIFY_CENTER);
-        }
-        return trendC + hX / 2;
+        return wordC + hX / 2;
     }
 
     // A live warning outranks the fire stage, which outranks the season's own
@@ -283,7 +295,8 @@ class HorseshoeFaceView extends WatchUi.WatchFace {
         }
 
         var hX = dc.getFontHeight(Graphics.FONT_XTINY);
-        var footerC = top + (8 * s).toNumber() + hX / 2;
+        var footerC = top + (6 * s).toNumber() + hX / 2;
+        if (footerC + hX / 2 > sy(390, s)) { return; }   // off the glass — yield
         if (text.length() > 30) { text = text.substring(0, 30); }
         dc.setColor(color, Graphics.COLOR_TRANSPARENT);
         Draw.spacedText(dc, cx, footerC, Graphics.FONT_XTINY, text, 1,
