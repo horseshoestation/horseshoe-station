@@ -81,12 +81,13 @@ class PagesView extends WatchUi.View {
             return;
         }
 
-        if (page == PAGE_GLASS)        { drawGlass(dc, cx, s); }
-        else if (page == PAGE_WIND)    { drawWind(dc, cx, s); }
-        else if (page == PAGE_LOG)     { drawLog(dc, cx, s); }
-        else                           { drawAlmanac(dc, cx, s); }
+        var bottom;
+        if (page == PAGE_GLASS)        { bottom = drawGlass(dc, cx, s); }
+        else if (page == PAGE_WIND)    { bottom = drawWind(dc, cx, s); }
+        else if (page == PAGE_LOG)     { bottom = drawLog(dc, cx, s); }
+        else                           { bottom = drawAlmanac(dc, cx, s); }
 
-        drawFooter(dc, cx, s);
+        drawFooter(dc, cx, s, bottom);
         drawDots(dc, cx, s);
     }
 
@@ -122,16 +123,26 @@ class PagesView extends WatchUi.View {
         }
     }
 
-    hidden function drawFooter(dc, cx, s) {
+    // The freshness line earns its pixels only when something is happening:
+    // a fetch in flight, or a reading gone stale. A quiet current page keeps
+    // the room. It flows under the content and yields if there is none left.
+    hidden function drawFooter(dc, cx, s, bottom) {
         var age = Feed.dataAgeMinutes(data);
-        var text = "485 Horseshoe Pl";
+        var text = null;
         if (fetching) {
             text = "reading...";
-        } else if (age != null) {
-            text = (age < 1) ? "just now" : age.format("%d") + " min old";
+        } else if (age != null && age > 25) {
+            text = age.format("%d") + " min old";
         }
+        if (text == null) { return; }
+
+        var hX = dc.getFontHeight(Graphics.FONT_XTINY);
+        var centre = bottom + (6 * s).toNumber() + hX / 2;
+        var floor = py(352, s) + hX / 2;
+        if (centre < floor) { centre = floor; }
+        if (centre + hX / 2 > py(382, s)) { return; }
         dc.setColor(Palette.dim(), Graphics.COLOR_TRANSPARENT);
-        Draw.spacedText(dc, cx, py(362, s), Graphics.FONT_XTINY, text, 1,
+        Draw.spacedText(dc, cx, centre, Graphics.FONT_XTINY, text, 1,
                         Graphics.TEXT_JUSTIFY_CENTER);
     }
 
@@ -153,9 +164,14 @@ class PagesView extends WatchUi.View {
         var hM = dc.getFontHeight(Graphics.FONT_NUMBER_MEDIUM);
         var pad = (3 * s).toNumber();
 
-        var barC = py(96, s) + hM / 2;
+        // MILD, not MEDIUM: the epix's medium numerals alone spent a third of
+        // the page and pushed the trace off the glass entirely.
+        var barFont = (Graphics has :FONT_NUMBER_MILD)
+                      ? Graphics.FONT_NUMBER_MILD : Graphics.FONT_NUMBER_MEDIUM;
+        hM = dc.getFontHeight(barFont);
+        var barC = py(94, s) + hM / 2;
         dc.setColor(Palette.ink(), Graphics.COLOR_TRANSPARENT);
-        Draw.textC(dc, cx, barC, Graphics.FONT_NUMBER_MEDIUM,
+        Draw.textC(dc, cx, barC, barFont,
                    Feed.twoDp(Feed.num(data, "bar")), Graphics.TEXT_JUSTIFY_CENTER);
 
         var absC = barC + hM / 2 + hX / 2 + pad;
@@ -174,13 +190,13 @@ class PagesView extends WatchUi.View {
         Draw.spacedText(dc, cx + (22 * s).toNumber(), rowC, Graphics.FONT_XTINY, tw, 2,
                         Graphics.TEXT_JUSTIFY_CENTER);
 
-        var verdictTop = rowC + hX / 2 + (8 * s).toNumber();
+        var verdictTop = rowC + hX / 2 + (6 * s).toNumber();
         dc.setColor(Palette.dim(), Graphics.COLOR_TRANSPARENT);
-        wrapped(dc, cx, verdictTop, Feed.num(data, "verdict"), s, 2);
+        var vlines = wrapped(dc, cx, verdictTop, Feed.num(data, "verdict"), s, 3);
 
         var seg = Feed.num(data, "dutch");
         if (seg == null) { seg = segFromWord(Feed.num(data, "dutchw")); }
-        var ladderY = verdictTop + (hX - 2) * 2 + (12 * s).toNumber();
+        var ladderY = verdictTop + (hX - 2) * vlines + (10 * s).toNumber();
         var w = (224 * s).toNumber();
         Draw.dutchScale(dc, cx - w / 2, ladderY, w, seg,
                         Palette.grid(), Palette.red(), Graphics.FONT_XTINY);
@@ -189,8 +205,9 @@ class PagesView extends WatchUi.View {
         Draw.spacedText(dc, cx, wordC, Graphics.FONT_XTINY,
                         Draw.ladderWord(seg), 3, Graphics.TEXT_JUSTIFY_CENTER);
 
-        traceBox(dc, cx, s, Feed.num(data, "bt"), "Pressure - 24 h", Palette.ink(),
-                 wordC + hX / 2 + hX + (14 * s).toNumber());
+        // bare trace: the page title already says what this is
+        return traceBox(dc, cx, s, Feed.num(data, "bt"), null, Palette.ink(),
+                        wordC + hX / 2 + (8 * s).toNumber());
     }
 
     hidden function drawWind(dc, cx, s) {
@@ -216,17 +233,19 @@ class PagesView extends WatchUi.View {
                         "Force " + Feed.whole(Feed.num(data, "bf")) + " - "
                         + strOr(Feed.num(data, "bfw"), ""), 1, Graphics.TEXT_JUSTIFY_CENTER);
 
+        // Short words down here: the circle narrows fast and "max 13 today -
+        // SW prevails" lost both its ends to the bezel.
         var maxC = forceC + hX + pad;
         dc.setColor(Palette.dim(), Graphics.COLOR_TRANSPARENT);
         Draw.spacedText(dc, cx, maxC, Graphics.FONT_XTINY,
-                        "max " + Feed.whole(Feed.num(data, "maxgust")) + " today - "
-                        + strOr(Feed.num(data, "prev"), "--") + " prevails", 1,
+                        "max " + Feed.whole(Feed.num(data, "maxgust")) + " - "
+                        + strOr(Feed.num(data, "prev"), "--") + " prevails", 0,
                         Graphics.TEXT_JUSTIFY_CENTER);
 
         // No header on this one — the page is already called The Wind, and the
         // line above it is using the space a label would want.
-        traceBox(dc, cx, s, Feed.num(data, "gt"), null, Palette.red(),
-                 maxC + hX / 2 + (14 * s).toNumber());
+        return traceBox(dc, cx, s, Feed.num(data, "gt"), null, Palette.red(),
+                        maxC + hX / 2 + (10 * s).toNumber());
     }
 
     hidden function drawLog(dc, cx, s) {
@@ -234,8 +253,8 @@ class PagesView extends WatchUi.View {
         var step = py(32, s);
         row(dc, s, y, "Temperature", Feed.oneDp(Feed.num(data, "temp")) + "°", Palette.ink());
         row(dc, s, y + step, "Feels like", Feed.whole(Feed.num(data, "feels")) + "°", Palette.red());
-        row(dc, s, y + step * 2, "Humidity",
-            Feed.whole(Feed.num(data, "hum")) + "%  dew " + Feed.whole(Feed.num(data, "dew")) + "°",
+        row(dc, s, y + step * 2, "Hum / dew",
+            Feed.whole(Feed.num(data, "hum")) + "% / " + Feed.whole(Feed.num(data, "dew")) + "°",
             Palette.ink());
         row(dc, s, y + step * 3, "High / low",
             Feed.whole(Feed.num(data, "hi")) + "° / " + Feed.whole(Feed.num(data, "lo")) + "°",
@@ -244,7 +263,7 @@ class PagesView extends WatchUi.View {
             Feed.whole(Feed.num(data, "tin")) + "°  " + Feed.whole(Feed.num(data, "hin")) + "%",
             Palette.dim());
 
-        traceBox(dc, cx, s, Feed.num(data, "tt"), "Temperature - 24 h", Palette.ink(), py(300, s));
+        return traceBox(dc, cx, s, Feed.num(data, "tt"), "Temp - 24 h", Palette.ink(), py(296, s));
     }
 
     hidden function drawAlmanac(dc, cx, s) {
@@ -269,22 +288,29 @@ class PagesView extends WatchUi.View {
         var fire = Feed.num(data, "fire");
         var alert = Feed.num(data, "alert");
         var banner = (alert != null) ? alert : fire;
+        var bottom = py(240, s);
         if (banner != null) {
             dc.setColor((alert != null) ? Palette.red() : Palette.gold(), Graphics.COLOR_TRANSPARENT);
-            wrapped(dc, cx, py(288, s), banner, s, 2);
+            var hX = dc.getFontHeight(Graphics.FONT_XTINY);
+            var n = wrapped(dc, cx, py(288, s), banner, s, 2);
+            bottom = py(288, s) + (hX - 2) * n;
         }
+        return bottom;
     }
 
     // ---- shared bits ------------------------------------------------------
 
     // label == null draws the trace bare, for pages with no room for a header.
     // yTop is absolute pixels: pages flow their layout from measured fonts and
-    // hand the trace whatever honest space is left.
+    // hand the trace whatever honest space is left. If the flow left no honest
+    // space, the trace yields entirely — a clipped graph lies about its data.
+    // Returns the bottom edge of whatever was drawn.
     hidden function traceBox(dc, cx, s, series, label as Lang.String?, color, yTop) {
-        if (series == null) { return; }
+        if (series == null) { return yTop; }
+        if (yTop > py(330, s)) { return yTop; }
         var x = cx - (112 * s).toNumber();
         var w = (224 * s).toNumber();
-        var h = (40 * s).toNumber();
+        var h = (32 * s).toNumber();
         var hX = dc.getFontHeight(Graphics.FONT_XTINY);
         var y = yTop;
 
@@ -305,13 +331,14 @@ class PagesView extends WatchUi.View {
                            Graphics.TEXT_JUSTIFY_RIGHT);
             }
         }
+        return y + h + 2;
     }
 
-    // Two lines of centred prose, broken on whitespace.
+    // Centred prose broken on whitespace; returns how many lines it set.
     hidden function wrapped(dc, cx, y, text as Lang.String?, s, maxLines) {
-        if (text == null) { return; }
+        if (text == null) { return 0; }
         var font = Graphics.FONT_XTINY;
-        var maxW = (250 * s).toNumber();
+        var maxW = (300 * s).toNumber();
         var words = split(text, " ");
         var line = "";
         var lines = [] as Lang.Array<Lang.String>;
@@ -331,6 +358,7 @@ class PagesView extends WatchUi.View {
         for (var i = 0; i < lines.size(); i += 1) {
             dc.drawText(cx, y + i * lh, font, lines[i], Graphics.TEXT_JUSTIFY_CENTER);
         }
+        return lines.size();
     }
 
     hidden function split(text as Lang.String, sep as Lang.String) as Lang.Array<Lang.String> {
