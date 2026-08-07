@@ -241,7 +241,7 @@ class HorseshoeFaceView extends WatchUi.WatchFace {
         var seg = Feed.num(d, "dutch");
         if (seg == null) { seg = segFromWord(Feed.num(d, "dutchw")); }
 
-        var ladderY = top + (8 * s).toNumber();
+        var ladderY = top + (6 * s).toNumber();
         var w = (216 * s).toNumber();
         Draw.dutchScale(dc, cx - w / 2, ladderY, w, seg,
                         Palette.grid(), Palette.red(), Graphics.FONT_XTINY);
@@ -250,7 +250,7 @@ class HorseshoeFaceView extends WatchUi.WatchFace {
         // One word only. The trend word came off the face: the arrow beside
         // BARO already tells that story, and its sentence lives on Storm
         // Watch. The line it freed is what lets the footer back on the glass.
-        var wordC = ladderY + (14 * s).toNumber() + hX / 2;
+        var wordC = ladderY + (11 * s).toNumber() + hX / 2;
         dc.setColor(Palette.trendColor(Feed.num(d, "trend")), Graphics.COLOR_TRANSPARENT);
         Draw.spacedText(dc, cx, wordC, Graphics.FONT_XTINY,
                         Draw.ladderWord(seg), 3, Graphics.TEXT_JUSTIFY_CENTER);
