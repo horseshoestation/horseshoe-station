@@ -16,12 +16,23 @@ class PagesView extends WatchUi.View {
     static const PAGE_WIND    = 1;
     static const PAGE_LOG     = 2;
     static const PAGE_ALMANAC = 3;
-    static const PAGE_COUNT   = 4;
+    static const PAGE_RADAR   = 4;
+    static const PAGE_COUNT   = 5;
+
+    // RainViewer's public radar, one mercator tile centred on the station:
+    // z7 x26 y48 spans roughly Kremmling to Byers, Wyoming line to Pikes
+    // Peak — the weather that matters, an hour either side of the Divide.
+    static const RADAR_INDEX = "https://api.rainviewer.com/public/weather-maps.json";
+    static const RADAR_TILE  = "/256/7/26/48/2/1_1.png";
 
     hidden var page = 0;
     hidden var data = null;
     hidden var fetching = false;
     hidden var failed = false;
+    hidden var radarBmp = null;
+    hidden var radarTime = null;
+    hidden var radarBusy = false;
+    hidden var radarFail = false;
 
     function initialize() {
         WatchUi.View.initialize();
@@ -34,6 +45,60 @@ class PagesView extends WatchUi.View {
 
     function turn(delta) {
         page = (page + delta + PAGE_COUNT) % PAGE_COUNT;
+        if (page == PAGE_RADAR) { radarRefresh(false); }
+        WatchUi.requestUpdate();
+    }
+
+    // ---- the radar ---------------------------------------------------------
+
+    // Two steps: RainViewer's index names the newest frame, then the tile
+    // comes down through Garmin's image service already sized and dithered
+    // for this screen. force = the user asked; otherwise only when the frame
+    // we hold is older than five minutes.
+    function radarRefresh(force) {
+        if (radarBusy) { return; }
+        if (!force && radarBmp != null && radarTime != null
+            && Time.now().value() - radarTime < 300) { return; }
+        radarBusy = true;
+        radarFail = false;
+        Communications.makeWebRequest(RADAR_INDEX, null, Feed.requestOptions(),
+                                      method(:onRadarIndex));
+    }
+
+    function onRadarIndex(
+        code as Lang.Number,
+        payload as Null or Lang.Dictionary or Lang.String or PersistedContent.Iterator
+    ) as Void {
+        if (code != 200 || payload == null || !(payload instanceof Lang.Dictionary)) {
+            radarBusy = false;
+            radarFail = true;
+            WatchUi.requestUpdate();
+            return;
+        }
+        var host = payload.get("host");
+        var radar = payload.get("radar");
+        var frames = (radar != null) ? radar.get("past") : null;
+        if (host == null || frames == null || frames.size() == 0) {
+            radarBusy = false;
+            radarFail = true;
+            WatchUi.requestUpdate();
+            return;
+        }
+        var last = frames[frames.size() - 1];
+        radarTime = last.get("time");
+        Communications.makeImageRequest(
+            host + last.get("path") + RADAR_TILE, null,
+            { :maxWidth => 256, :maxHeight => 256 },
+            method(:onRadarTile));
+    }
+
+    function onRadarTile(code as Lang.Number, bmp) as Void {
+        radarBusy = false;
+        if (code == 200 && bmp != null) {
+            radarBmp = bmp;
+        } else {
+            radarFail = true;
+        }
         WatchUi.requestUpdate();
     }
 
@@ -71,6 +136,14 @@ class PagesView extends WatchUi.View {
         dc.setColor(Palette.paper(), Palette.paper());
         dc.clear();
 
+        // The radar draws its own sky and needs nothing from the station, so
+        // it goes ahead of the no-data gate and skips the shared chrome.
+        if (page == PAGE_RADAR) {
+            drawRadar(dc, cx, s);
+            drawDots(dc, cx, s);
+            return;
+        }
+
         drawChrome(dc, cx, s);
 
         if (data == null) {
@@ -97,6 +170,7 @@ class PagesView extends WatchUi.View {
         if (page == PAGE_GLASS) { return "Storm Watch"; }
         if (page == PAGE_WIND)  { return "The Wind"; }
         if (page == PAGE_LOG)   { return "Trail Log"; }
+        if (page == PAGE_RADAR) { return "The Radar"; }
         return "Sun & Sky";
     }
 
@@ -296,6 +370,61 @@ class PagesView extends WatchUi.View {
             bottom = py(288, s) + (hX - 2) * n;
         }
         return bottom;
+    }
+
+    // The rain over the country round. The tile carries transparency where
+    // the sky is dry, so the underlay — the Divide, the station, the towns —
+    // reads through it exactly like weather over the Chart page.
+    hidden function drawRadar(dc, cx, s) {
+        var w = dc.getWidth();
+        var h = dc.getHeight();
+
+        // underlay first: a ghost of the chart for the rain to land on
+        dc.setColor(Palette.grid(), Graphics.COLOR_TRANSPARENT);
+        dc.setPenWidth(1);
+        dc.drawLine(py(184, s), 0, py(176, s), h);              // the Divide
+        drawTown(dc, s, 237, 179, "BOULDER");
+        drawTown(dc, s, 202, 161, "WARD");
+        drawTown(dc, s, 203, 207, "ROLLINSVILLE");
+
+        if (radarBmp != null) {
+            if (dc has :drawScaledBitmap) {
+                dc.drawScaledBitmap(0, 0, w, h, radarBmp);
+            } else {
+                dc.drawBitmap(cx - radarBmp.getWidth() / 2,
+                              h / 2 - radarBmp.getHeight() / 2, radarBmp);
+            }
+        }
+
+        // the station over everything: this is where you are standing
+        dc.setColor(Palette.red(), Graphics.COLOR_TRANSPARENT);
+        dc.fillCircle(py(204, s), py(192, s), (4 * s).toNumber());
+
+        dc.setColor(Palette.blue(), Graphics.COLOR_TRANSPARENT);
+        Draw.spacedText(dc, cx, py(40, s), Graphics.FONT_XTINY, "The Radar", 4,
+                        Graphics.TEXT_JUSTIFY_CENTER);
+
+        var hX = dc.getFontHeight(Graphics.FONT_XTINY);
+        var line = null;
+        if (radarBusy) {
+            line = "raising the radar...";
+        } else if (radarBmp == null) {
+            line = radarFail ? "no radar reachable" : "raising the radar...";
+        } else if (radarTime != null) {
+            var mins = (Time.now().value() - radarTime) / 60;
+            line = "swept " + mins.format("%d") + " min ago - rainviewer";
+        }
+        if (line != null) {
+            dc.setColor(Palette.dim(), Graphics.COLOR_TRANSPARENT);
+            Draw.spacedText(dc, cx, py(362, s), Graphics.FONT_XTINY, line, 0,
+                            Graphics.TEXT_JUSTIFY_CENTER);
+        }
+    }
+
+    hidden function drawTown(dc, s, x, y, name) {
+        dc.drawCircle(py(x, s), py(y, s), (3 * s).toNumber());
+        Draw.spacedText(dc, py(x, s) + (8 * s).toNumber(), py(y, s),
+                        Graphics.FONT_XTINY, name, 0, Graphics.TEXT_JUSTIFY_LEFT);
     }
 
     // ---- shared bits ------------------------------------------------------

@@ -77,7 +77,7 @@ class HorseshoeFaceView extends WatchUi.WatchFace {
 
         y = drawDeckLog(dc, cx, s, d, y + (10 * s).toNumber());
         y = drawGlassWord(dc, cx, s, d, y);
-        drawFooter(dc, cx, s, d, y);
+        drawBottom(dc, cx, s, d, y);
     }
 
     // vertical position from the 416 px reference design
@@ -104,28 +104,13 @@ class HorseshoeFaceView extends WatchUi.WatchFace {
     }
 
     hidden function drawHeading(dc, cx, s, d) {
-        // The circle is narrow this high up: measure the title against the
-        // chord at its own height and tighten the letter-spacing until it
-        // fits. Spaced at 3 it lost both ends to the bezel.
-        var title = "HORSESHOE STATION";
-        var hX = dc.getFontHeight(Graphics.FONT_XTINY);
-        var r = dc.getWidth() / 2;
-        var dy = r - (sy(30, s) - hX / 2);
-        var half = Math.sqrt((r * r - dy * dy).toFloat()).toNumber();
-        var room = 2 * half - (10 * s).toNumber();
-        var extra = 3;
-        while (extra > 0
-               && dc.getTextWidthInPixels(title, Graphics.FONT_XTINY)
-                  + extra * (title.length() - 1) > room) {
-            extra -= 1;
-        }
-        dc.setColor(Palette.blue(), Graphics.COLOR_TRANSPARENT);
-        Draw.spacedText(dc, cx, sy(30, s), Graphics.FONT_XTINY,
-                        title, extra, Graphics.TEXT_JUSTIFY_CENTER);
+        // No masthead. The ridge is the signature; the name lives on the
+        // glance and the app. With the title gone the Divide climbs into the
+        // clear air at the top of the glass.
         var winter = isWinter();
-        Draw.sunArc(dc, s, sunFrac(d), winter ? 58 : 46, 78,
+        Draw.sunArc(dc, s, sunFrac(d), winter ? 46 : 32, 66,
                     Palette.grid(), Palette.gold());
-        Draw.ridgeline(dc, s, 82, 1.0, Palette.ink(), winter);
+        Draw.ridgeline(dc, s, 70, 1.0, Palette.ink(), winter);
     }
 
     hidden function drawTime(dc, cx, s) {
@@ -139,7 +124,7 @@ class HorseshoeFaceView extends WatchUi.WatchFace {
         }
         var text = hour.format("%02d") + ":" + clock.min.format("%02d");
 
-        var centre = sy(124, s);
+        var centre = sy(112, s);
         dc.setColor(Palette.ink(), Graphics.COLOR_TRANSPARENT);
         Draw.textC(dc, cx, centre, Graphics.FONT_NUMBER_HOT, text,
                    Graphics.TEXT_JUSTIFY_CENTER);
@@ -257,58 +242,40 @@ class HorseshoeFaceView extends WatchUi.WatchFace {
         return wordC + hX / 2;
     }
 
-    // A live warning outranks the fire stage, which outranks the season's own
-    // line: UV and burn time above treeline in summer, daylight left on the
-    // snow in winter. Rain is the fallback when nothing else has a claim.
-    hidden function drawFooter(dc, cx, s, d, top) {
+    // The bottom of the glass: a warning or the fire stage when one stands,
+    // otherwise the last 24 hours of temperature as a thin trace — the day's
+    // shape at a glance, hi and lo already implied by its ends.
+    hidden function drawBottom(dc, cx, s, d, top) {
+        var hX = dc.getFontHeight(Graphics.FONT_XTINY);
         var alert = Feed.num(d, "alert");
         var fire = Feed.num(d, "fire");
-        var text = null;
-        var color = Palette.dim();
 
-        if (alert != null) {
-            text = alert;
-            color = Palette.red();
-        } else if (fire != null) {
-            text = fire;
-            color = Palette.gold();
-        } else if (isWinter()) {
-            var ss = Feed.num(d, "ss");
-            var left = (ss != null) ? (ss / 1000 - Time.now().value()) : null;
-            if (left != null && left > 0) {
-                var hrs = left / 3600;
-                var mins = (left % 3600) / 60;
-                text = "daylight " + hrs.format("%d") + " h " + mins.format("%02d") + " m left";
-                color = Palette.gold();
-            }
-        } else {
-            var uv = Feed.num(d, "uv");
-            if (uv != null && uv >= 3) {
-                var burn = (uv >= 11) ? 10 : (uv >= 8) ? 15 : (uv >= 6) ? 25 : 45;
-                text = "UV " + Feed.whole(uv) + " - burn " + burn.format("%d") + " min";
-                color = Palette.gold();
-            }
-        }
-        if (text == null) {
-            text = "rain " + Feed.twoDp(Feed.num(d, "rain")) + " in";
-            color = Palette.blue();
+        if (alert != null || fire != null) {
+            var text = (alert != null) ? alert : fire;
+            var color = (alert != null) ? Palette.red() : Palette.gold();
+            var footerC = top + (6 * s).toNumber() + hX / 2;
+            if (footerC + hX / 2 > sy(390, s)) { return; }
+            if (text.length() > 30) { text = text.substring(0, 30); }
+            dc.setColor(color, Graphics.COLOR_TRANSPARENT);
+            Draw.spacedText(dc, cx, footerC, Graphics.FONT_XTINY, text, 1,
+                            Graphics.TEXT_JUSTIFY_CENTER);
+            return;
         }
 
-        var hX = dc.getFontHeight(Graphics.FONT_XTINY);
-        var footerC = top + (6 * s).toNumber() + hX / 2;
-        if (footerC + hX / 2 > sy(390, s)) { return; }   // off the glass — yield
-        if (text.length() > 30) { text = text.substring(0, 30); }
-        dc.setColor(color, Graphics.COLOR_TRANSPARENT);
-        Draw.spacedText(dc, cx, footerC, Graphics.FONT_XTINY, text, 1,
-                        Graphics.TEXT_JUSTIFY_CENTER);
+        var tt = Feed.num(d, "tt");
+        var traceTop = top + (8 * s).toNumber();
+        var traceH = sy(384, s) - traceTop;
+        if (traceH > (34 * s).toNumber()) { traceH = (34 * s).toNumber(); }
+        if (tt != null && traceH >= (14 * s).toNumber()) {
+            var tw2 = (200 * s).toNumber();
+            Draw.trace(dc, tt, cx - tw2 / 2, traceTop, tw2, traceH, Palette.dim(), 2);
+        }
 
-        // How old the sky is. Not how old the fetch is — the frame renders on
-        // its own ten-minute clock, so a fresh download can still be stale air.
-        // Suppressed in always-on, where every lit pixel is battery.
+        // Staleness still gets the last word, drawn over the trace's ground.
         var age = Feed.dataAgeMinutes(d);
         if (!lowPower && age != null && age > 25) {
-            dc.setColor(Palette.dim(), Graphics.COLOR_TRANSPARENT);
-            Draw.spacedText(dc, cx, footerC + hX + (1 * s).toNumber(), Graphics.FONT_XTINY,
+            dc.setColor(Palette.red(), Graphics.COLOR_TRANSPARENT);
+            Draw.spacedText(dc, cx, traceTop + traceH / 2, Graphics.FONT_XTINY,
                             age.format("%d") + " min old", 1, Graphics.TEXT_JUSTIFY_CENTER);
         }
     }

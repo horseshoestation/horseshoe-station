@@ -43,7 +43,8 @@ module Feed {
         "t", "temp", "feels", "hum", "hi", "lo",
         "wind", "gust", "dirn", "maxgust",
         "bar", "trend", "trendw", "dutch", "dutchw",
-        "rain", "uv", "aqi", "fire", "alert", "sr", "ss"
+        "rain", "uv", "aqi", "fire", "alert", "sr", "ss",
+        "tt"    // the face draws the day's temperature as its ground floor
     ];
 
     function requestOptions() {
