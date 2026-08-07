@@ -75,24 +75,34 @@ class PagesView extends WatchUi.View {
             WatchUi.requestUpdate();
             return;
         }
-        var host = payload.get("host");
-        var radar = payload.get("radar");
-        var frames = (radar != null) ? radar.get("past") : null;
-        if (host == null || frames == null || frames.size() == 0) {
+        var dict = payload as Lang.Dictionary;
+        var host = dict.get("host");
+        var radar = dict.get("radar");
+        var frames = null;
+        if (radar instanceof Lang.Dictionary) {
+            frames = (radar as Lang.Dictionary).get("past");
+        }
+        if (host == null || !(frames instanceof Lang.Array) || (frames as Lang.Array).size() == 0) {
             radarBusy = false;
             radarFail = true;
             WatchUi.requestUpdate();
             return;
         }
-        var last = frames[frames.size() - 1];
+        var arr = frames as Lang.Array;
+        var last = arr[arr.size() - 1] as Lang.Dictionary;
         radarTime = last.get("time");
         Communications.makeImageRequest(
-            host + last.get("path") + RADAR_TILE, null,
+            (host as Lang.String) + (last.get("path") as Lang.String) + RADAR_TILE, null,
             { :maxWidth => 256, :maxHeight => 256 },
             method(:onRadarTile));
     }
 
-    function onRadarTile(code as Lang.Number, bmp) as Void {
+    // The signature must match Communications' image callback exactly, or
+    // the checker rejects the method reference at the call site.
+    function onRadarTile(
+        code as Lang.Number,
+        bmp as Null or Graphics.BitmapReference or WatchUi.BitmapResource
+    ) as Void {
         radarBusy = false;
         if (code == 200 && bmp != null) {
             radarBmp = bmp;
@@ -391,8 +401,9 @@ class PagesView extends WatchUi.View {
             if (dc has :drawScaledBitmap) {
                 dc.drawScaledBitmap(0, 0, w, h, radarBmp);
             } else {
-                dc.drawBitmap(cx - radarBmp.getWidth() / 2,
-                              h / 2 - radarBmp.getHeight() / 2, radarBmp);
+                // the tile is requested at 256; centre it without asking the
+                // bitmap anything a BitmapReference might not answer
+                dc.drawBitmap(cx - 128, h / 2 - 128, radarBmp);
             }
         }
 
@@ -404,7 +415,6 @@ class PagesView extends WatchUi.View {
         Draw.spacedText(dc, cx, py(40, s), Graphics.FONT_XTINY, "The Radar", 4,
                         Graphics.TEXT_JUSTIFY_CENTER);
 
-        var hX = dc.getFontHeight(Graphics.FONT_XTINY);
         var line = null;
         if (radarBusy) {
             line = "raising the radar...";
