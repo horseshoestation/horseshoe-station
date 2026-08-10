@@ -5,6 +5,7 @@ using Toybox.Math;
 using Toybox.PersistedContent;
 using Toybox.System;
 using Toybox.Time;
+using Toybox.Timer;
 using Toybox.WatchUi;
 
 // The frame turns its own pages on a ten-minute clock. On the wrist you turn
@@ -29,8 +30,17 @@ class PagesView extends WatchUi.View {
     hidden var data = null;
     hidden var fetching = false;
     hidden var failed = false;
-    hidden var radarBmp = null;
-    hidden var radarTime = null;
+
+    // The radar loop: up to six frames spanning the last ~100 minutes,
+    // fetched newest-first so the screen fills at once, played oldest to
+    // newest with a hold on the present.
+    hidden var radarFrames = [];      // [{ :t => epoch sec, :bmp => bitmap }]
+    hidden var radarPending = [];     // frame dictionaries still to fetch
+    hidden var radarCurrent = null;   // the frame in flight
+    hidden var radarHost = null;
+    hidden var radarIdx = 0;
+    hidden var radarHold = 0;
+    hidden var radarTimer = null;
     hidden var radarBusy = false;
     hidden var radarFail = false;
 
@@ -45,20 +55,62 @@ class PagesView extends WatchUi.View {
 
     function turn(delta) {
         page = (page + delta + PAGE_COUNT) % PAGE_COUNT;
-        if (page == PAGE_RADAR) { radarRefresh(false); }
+        if (page == PAGE_RADAR) {
+            radarRefresh(false);
+            radarPlay();
+        } else {
+            radarStop();
+        }
+        WatchUi.requestUpdate();
+    }
+
+    function onHide() {
+        radarStop();
+    }
+
+    // ---- the radar loop ----------------------------------------------------
+
+    hidden function radarPlay() {
+        if (radarTimer == null && radarFrames.size() > 1) {
+            radarTimer = new Timer.Timer();
+            radarTimer.start(method(:radarTick), 700, true);
+        }
+    }
+
+    hidden function radarStop() {
+        if (radarTimer != null) {
+            radarTimer.stop();
+            radarTimer = null;
+        }
+    }
+
+    // Advance the loop; linger three beats on the present before replaying.
+    function radarTick() as Void {
+        if (radarFrames.size() < 2) { return; }
+        if (radarIdx >= radarFrames.size() - 1) {
+            radarHold += 1;
+            if (radarHold < 3) { return; }
+            radarHold = 0;
+            radarIdx = 0;
+        } else {
+            radarIdx += 1;
+        }
         WatchUi.requestUpdate();
     }
 
     // ---- the radar ---------------------------------------------------------
 
-    // Two steps: RainViewer's index names the newest frame, then the tile
-    // comes down through Garmin's image service already sized and dithered
-    // for this screen. force = the user asked; otherwise only when the frame
-    // we hold is older than five minutes.
+    // RainViewer's index names the past two hours of frames; we take every
+    // other one, newest first, and chain the tile fetches one at a time.
+    // force = the user asked; otherwise only when our newest frame is older
+    // than five minutes.
     function radarRefresh(force) {
         if (radarBusy) { return; }
-        if (!force && radarBmp != null && radarTime != null
-            && Time.now().value() - radarTime < 300) { return; }
+        if (!force && radarFrames.size() > 0) {
+            var newest = radarFrames[radarFrames.size() - 1] as Lang.Dictionary;
+            var t = newest.get(:t);
+            if (t != null && Time.now().value() - t < 300) { return; }
+        }
         radarBusy = true;
         radarFail = false;
         Communications.makeWebRequest(RADAR_INDEX, null, Feed.requestOptions(),
@@ -89,10 +141,31 @@ class PagesView extends WatchUi.View {
             return;
         }
         var arr = frames as Lang.Array;
-        var last = arr[arr.size() - 1] as Lang.Dictionary;
-        radarTime = last.get("time");
+        radarHost = host as Lang.String;
+        radarPending = [] as Lang.Array;
+        var i = arr.size() - 1;
+        while (i >= 0 && radarPending.size() < 6) {
+            radarPending.add(arr[i]);
+            i -= 2;                       // every other frame: ~20-minute steps
+        }
+        radarFrames = [] as Lang.Array;
+        radarIdx = 0;
+        radarHold = 0;
+        fetchNextRadar();
+    }
+
+    hidden function fetchNextRadar() {
+        if (radarPending.size() == 0) {
+            radarBusy = false;
+            radarIdx = radarFrames.size() - 1;   // rest on the present
+            radarPlay();
+            WatchUi.requestUpdate();
+            return;
+        }
+        radarCurrent = radarPending[0] as Lang.Dictionary;
+        radarPending = radarPending.slice(1, null);
         Communications.makeImageRequest(
-            (host as Lang.String) + (last.get("path") as Lang.String) + RADAR_TILE, null,
+            radarHost + (radarCurrent.get("path") as Lang.String) + RADAR_TILE, null,
             { :maxWidth => 256, :maxHeight => 256 },
             method(:onRadarTile));
     }
@@ -103,13 +176,20 @@ class PagesView extends WatchUi.View {
         code as Lang.Number,
         bmp as Null or Graphics.BitmapReference or WatchUi.BitmapResource
     ) as Void {
-        radarBusy = false;
-        if (code == 200 && bmp != null) {
-            radarBmp = bmp;
-        } else {
+        if (code == 200 && bmp != null && radarCurrent != null) {
+            // fetched newest-first; keep the list oldest-first for the loop
+            var frame = { :t => radarCurrent.get("time"), :bmp => bmp };
+            var rebuilt = [frame] as Lang.Array;
+            for (var i = 0; i < radarFrames.size(); i += 1) {
+                rebuilt.add(radarFrames[i]);
+            }
+            radarFrames = rebuilt;
+            radarIdx = radarFrames.size() - 1;   // show the present while loading
+        } else if (radarFrames.size() == 0) {
             radarFail = true;
         }
         WatchUi.requestUpdate();
+        fetchNextRadar();
     }
 
     // force = the user asked; otherwise only go out if what we hold is stale.
@@ -397,13 +477,19 @@ class PagesView extends WatchUi.View {
         drawTown(dc, s, 202, 161, "WARD", true);       // label left: clears Boulder's
         drawTown(dc, s, 203, 207, "ROLLINSVILLE", false);
 
-        if (radarBmp != null) {
-            if (dc has :drawScaledBitmap) {
-                dc.drawScaledBitmap(0, 0, w, h, radarBmp);
-            } else {
-                // the tile is requested at 256; centre it without asking the
-                // bitmap anything a BitmapReference might not answer
-                dc.drawBitmap(cx - 128, h / 2 - 128, radarBmp);
+        var showing = null;
+        if (radarFrames.size() > 0) {
+            if (radarIdx >= radarFrames.size()) { radarIdx = radarFrames.size() - 1; }
+            showing = radarFrames[radarIdx] as Lang.Dictionary;
+            var bmp = showing.get(:bmp);
+            if (bmp != null) {
+                if (dc has :drawScaledBitmap) {
+                    dc.drawScaledBitmap(0, 0, w, h, bmp);
+                } else {
+                    // the tile is requested at 256; centre it without asking
+                    // the bitmap anything a BitmapReference might not answer
+                    dc.drawBitmap(cx - 128, h / 2 - 128, bmp);
+                }
             }
         }
 
@@ -415,15 +501,20 @@ class PagesView extends WatchUi.View {
         Draw.spacedText(dc, cx, py(40, s), Graphics.FONT_XTINY, "The Radar", 4,
                         Graphics.TEXT_JUSTIFY_CENTER);
 
+        // The sweep line follows the loop: each frame names its own clock
+        // time, so you can watch the last hour and a half walk past.
         var line = null;
-        if (radarBusy) {
-            line = "raising the radar...";
-        } else if (radarBmp == null) {
+        if (radarFrames.size() == 0) {
             line = radarFail ? "no radar reachable" : "raising the radar...";
-        } else if (radarTime != null) {
-            // short words, higher on the glass: at 362 the chord ate both ends
-            var mins = (Time.now().value() - radarTime) / 60;
-            line = "swept " + mins.format("%d") + " min - rainviewer";
+        } else if (showing != null) {
+            var t = showing.get(:t);
+            if (t != null) {
+                line = hhmm((t as Lang.Number) * 1000) + " - rainviewer";
+                if (radarBusy) {
+                    line = hhmm((t as Lang.Number) * 1000) + " - raising "
+                           + radarFrames.size().format("%d") + "/6";
+                }
+            }
         }
         if (line != null) {
             dc.setColor(Palette.dim(), Graphics.COLOR_TRANSPARENT);

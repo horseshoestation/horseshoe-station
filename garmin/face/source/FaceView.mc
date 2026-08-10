@@ -179,15 +179,8 @@ class HorseshoeFaceView extends WatchUi.WatchFace {
         Draw.textC(dc, cx, tempC, Graphics.FONT_NUMBER_MEDIUM,
                    Feed.whole(Feed.num(d, "temp")) + "°", Graphics.TEXT_JUSTIFY_CENTER);
 
-        // feels rides level with the gust and the arrow — hanging it under the
-        // big numerals was the row that kept pushing the bottom off the glass
-        var feelsC = thirdC;
-        var feels = Feed.num(d, "feels");
-        if (feels != null) {
-            dc.setColor(Palette.red(), Graphics.COLOR_TRANSPARENT);
-            Draw.spacedText(dc, cx, feelsC, Graphics.FONT_XTINY,
-                            "feels " + Feed.whole(feels), 1, Graphics.TEXT_JUSTIFY_CENTER);
-        }
+        // No feels-like on the face — it read as clutter under the big number.
+        // The Trail Log still carries it for the days it differs enough to care.
 
         // left: wind
         dc.setColor(Palette.blue(), Graphics.COLOR_TRANSPARENT);
@@ -216,9 +209,7 @@ class HorseshoeFaceView extends WatchUi.WatchFace {
         Draw.arrow(dc, rightX, thirdC, (26 * s).toNumber(),
                    trend, Palette.trendColor(trend));
 
-        var bottom = thirdC + hX / 2;
-        var feelsBottom = feelsC + hX / 2;
-        return (feelsBottom > bottom) ? feelsBottom : bottom;
+        return thirdC + hX / 2;
     }
 
     // The condition ladder, and the pointer that says which rung we live on.
