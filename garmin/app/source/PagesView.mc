@@ -109,7 +109,7 @@ class PagesView extends WatchUi.View {
         if (!force && radarFrames.size() > 0) {
             var newest = radarFrames[radarFrames.size() - 1] as Lang.Dictionary;
             var t = newest.get(:t);
-            if (t != null && Time.now().value() - t < 300) { return; }
+            if (t != null && Time.now().value() - (t as Lang.Number) < 300) { return; }
         }
         radarBusy = true;
         radarFail = false;
