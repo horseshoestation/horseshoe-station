@@ -283,7 +283,7 @@ class PagesView extends WatchUi.View {
         var ladderY = verdictTop + (hX - 2) * vlines + (10 * s).toNumber();
         var w = (224 * s).toNumber();
         Draw.dutchScale(dc, cx - w / 2, ladderY, w, seg,
-                        Palette.grid(), Palette.red(), Graphics.FONT_XTINY);
+                        Palette.grid(), Palette.red(), Graphics.FONT_XTINY, false);
         var wordC = ladderY + (14 * s).toNumber() + hX / 2;
         dc.setColor(Palette.ink(), Graphics.COLOR_TRANSPARENT);
         Draw.spacedText(dc, cx, wordC, Graphics.FONT_XTINY,
@@ -393,9 +393,9 @@ class PagesView extends WatchUi.View {
         dc.setColor(Palette.grid(), Graphics.COLOR_TRANSPARENT);
         dc.setPenWidth(1);
         dc.drawLine(py(184, s), 0, py(176, s), h);              // the Divide
-        drawTown(dc, s, 237, 179, "BOULDER");
-        drawTown(dc, s, 202, 161, "WARD");
-        drawTown(dc, s, 203, 207, "ROLLINSVILLE");
+        drawTown(dc, s, 237, 179, "BOULDER", false);
+        drawTown(dc, s, 202, 161, "WARD", true);       // label left: clears Boulder's
+        drawTown(dc, s, 203, 207, "ROLLINSVILLE", false);
 
         if (radarBmp != null) {
             if (dc has :drawScaledBitmap) {
@@ -421,20 +421,26 @@ class PagesView extends WatchUi.View {
         } else if (radarBmp == null) {
             line = radarFail ? "no radar reachable" : "raising the radar...";
         } else if (radarTime != null) {
+            // short words, higher on the glass: at 362 the chord ate both ends
             var mins = (Time.now().value() - radarTime) / 60;
-            line = "swept " + mins.format("%d") + " min ago - rainviewer";
+            line = "swept " + mins.format("%d") + " min - rainviewer";
         }
         if (line != null) {
             dc.setColor(Palette.dim(), Graphics.COLOR_TRANSPARENT);
-            Draw.spacedText(dc, cx, py(362, s), Graphics.FONT_XTINY, line, 0,
+            Draw.spacedText(dc, cx, py(348, s), Graphics.FONT_XTINY, line, 0,
                             Graphics.TEXT_JUSTIFY_CENTER);
         }
     }
 
-    hidden function drawTown(dc, s, x, y, name) {
+    hidden function drawTown(dc, s, x, y, name, labelLeft) {
         dc.drawCircle(py(x, s), py(y, s), (3 * s).toNumber());
-        Draw.spacedText(dc, py(x, s) + (8 * s).toNumber(), py(y, s),
-                        Graphics.FONT_XTINY, name, 0, Graphics.TEXT_JUSTIFY_LEFT);
+        if (labelLeft) {
+            Draw.spacedText(dc, py(x, s) - (8 * s).toNumber(), py(y, s),
+                            Graphics.FONT_XTINY, name, 0, Graphics.TEXT_JUSTIFY_RIGHT);
+        } else {
+            Draw.spacedText(dc, py(x, s) + (8 * s).toNumber(), py(y, s),
+                            Graphics.FONT_XTINY, name, 0, Graphics.TEXT_JUSTIFY_LEFT);
+        }
     }
 
     // ---- shared bits ------------------------------------------------------

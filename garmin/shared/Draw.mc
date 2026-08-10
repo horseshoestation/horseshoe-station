@@ -189,9 +189,10 @@ module Draw {
         }
     }
 
-    // STORM · REGEN · VERANDERLYK · MOOI WEER · BESTENDIG, with the current
-    // segment picked out and a pointer beneath it.
-    function dutchScale(dc, x, y, w, seg, inkColor, redColor, font) {
+    // The condition scale, with the current segment picked out by a pointer.
+    // pointerUp puts the marker above the line (pointing down at it), which
+    // frees the ground beneath for the word — the face needs every row.
+    function dutchScale(dc, x, y, w, seg, inkColor, redColor, font, pointerUp) {
         var n = 5;
         var step = w / n;
         dc.setColor(inkColor, Graphics.COLOR_TRANSPARENT);
@@ -201,13 +202,16 @@ module Draw {
             var tx = x + i * step;
             dc.drawLine(tx, y - 4, tx, y + 4);
         }
-        // Only the live word is set; five words of VERANDERLYK will not fit a
-        // 416 px circle, and the neighbours add nothing you can read at a wrist
-        // glance anyway.
+        // Only the live word is set; five words across will not fit a 416 px
+        // circle, and the neighbours add nothing at a wrist glance anyway.
         if (seg == null) { seg = 2; }
         var cx = x + seg * step + step / 2;
         dc.setColor(redColor, Graphics.COLOR_TRANSPARENT);
-        dc.fillPolygon([[cx, y + 5], [cx + 5, y + 12], [cx - 5, y + 12]]);
+        if (pointerUp) {
+            dc.fillPolygon([[cx, y - 5], [cx + 5, y - 12], [cx - 5, y - 12]]);
+        } else {
+            dc.fillPolygon([[cx, y + 5], [cx + 5, y + 12], [cx - 5, y + 12]]);
+        }
     }
 
     // ---- traces -----------------------------------------------------------
