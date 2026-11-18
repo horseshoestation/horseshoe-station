@@ -1103,6 +1103,9 @@ function activePages(){
   if((month>=4&&month<=9)||redflag)         // fire season May–Oct, or any red flag
     p.splice(4,0,{id:"fire",title:"THE FIRE WATCH",fn:pageFire});
   if(S.aqi&&S.aqi.us_aqi>100) p.push({id:"smoke",title:"THE SMOKE WATCH",fn:pageSmoke});
+  // A standing warning is the first page of the rotation, not a takeover.
+  var w=activeWarning();
+  if(w) p.unshift({id:"warning",title:"THE WARNING",fn:function(){return pageWarning(w);}});
   return p;
 }
 function activeWarning(){
@@ -1121,20 +1124,13 @@ function render(){
   if(S.demo){ sn.textContent="DEMO"; sn.className="stat-bad"; }
   else if(S.errors.awn){ sn.textContent="STATION LINK LOST"; sn.className="stat-bad"; }
   else { sn.textContent="LIVE · "+fmtT(S.lastTurn||Date.now(),{hour:"numeric",minute:"2-digit"}); sn.className="stat-ok"; }
-  if(warn){
-    rb.classList.add("warned");
-    $("orntitle").innerHTML="&#9888;&nbsp;&nbsp;THE WARNING&nbsp;&nbsp;&#9888;";
-    $("content").innerHTML=pageWarning(warn);
-    $("dots").innerHTML="&#9888;";
-    return;
-  }
-  rb.classList.remove("warned");
   var pages=activePages(); idx=idx%pages.length;
-  var pg=pages[idx];
-  $("orntitle").innerHTML="&#10022;&nbsp;&nbsp;"+pg.title+"&nbsp;&nbsp;&#10022;";
+  var pg=pages[idx], onWarn=pg.id==="warning", orn=onWarn?"&#9888;":"&#10022;";
+  rb.classList.toggle("warned",onWarn);
+  $("orntitle").innerHTML=orn+"&nbsp;&nbsp;"+pg.title+"&nbsp;&nbsp;"+orn;
   try{ $("content").innerHTML=pg.fn(); }
   catch(e){ $("content").innerHTML='<div class="splash"><div class="s1">This page hit weather of its own.</div><div class="s2">'+esc(e.message)+'</div></div>'; }
-  var dots=""; pages.forEach(function(p,i){ dots+=(i===idx?"&#9679; ":"&#9675; "); });
+  var dots=""; pages.forEach(function(p,i){ dots+=(p.id==="warning"?"&#9888; ":(i===idx?"&#9679; ":"&#9675; ")); });
   $("dots").innerHTML=dots.trim();
 }
 function advance(n){ var pages=activePages(); idx=(idx+n+pages.length)%pages.length; render(); }
@@ -1146,7 +1142,7 @@ document.addEventListener("keydown",function(e){
   if(e.key==="ArrowRight"){holdUntil=Date.now()+120000;advance(1);}
   if(e.key==="ArrowLeft"){holdUntil=Date.now()+120000;advance(-1);}
 });
-setInterval(function(){ if(Date.now()>holdUntil&&S.cur&&!activeWarning()) advance(1); }, CFG.pageSeconds*1000);
+setInterval(function(){ if(Date.now()>holdUntil&&S.cur) advance(1); }, CFG.pageSeconds*1000);
 
 /* ================= BOOT ================= */
 async function boot(){
