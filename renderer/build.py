@@ -17,7 +17,7 @@ LOGBOOK = DATA / "logbook.json"
 TZ = "America/Denver"
 LAT, LON = 39.9693, -105.4951
 MAC = "34:5F:45:66:8E:40"
-UA = {"User-Agent": "HorseshoeStation/1.0 (personal weather frame; mountainautorepair@gmail.com)"}
+UA = {"User-Agent": "HorseshoeStation/1.0 (personal weather frame; +https://github.com/horseshoestation/horseshoe-station)"}
 
 MOCK = os.environ.get("MOCK") == "1"
 if not MOCK:
@@ -225,8 +225,18 @@ def decide_pages(now_local, aqi, alerts, month):
     if any(re.search("red flag", a.get("event", ""), re.I) for a in alerts) and "fire" not in cycle:
         cycle.append("fire")
     slot = (now_local.hour * 60 + now_local.minute) // 10
-    current = cycle[slot % len(cycle)]
+    if warning_active(alerts):
+        # A standing warning shares the rotation rather than replacing it:
+        # the frame shows The Warning on every other wake and carries on
+        # through the ordinary pages in between.
+        current = "warning" if slot % 2 == 0 else cycle[(slot // 2) % len(cycle)]
+    else:
+        current = cycle[slot % len(cycle)]
     return cycle, current
+
+def warning_active(alerts):
+    return any(a.get("severity") in ("Severe", "Extreme")
+               and re.search("warning", a.get("event", ""), re.I) for a in alerts)
 
 # ---------------- render ----------------
 def render_pages(data, cycle):
@@ -240,8 +250,7 @@ def render_pages(data, cycle):
            0x2e, 0x5f, 0x94, 0xd4, 0xa0, 0x17, 0x2e, 0x7d, 0x4f]
     pimg = Image.new("P", (1, 1)); pimg.putpalette(pal + [0, 0, 0] * (256 - 6))
 
-    warn_active = any(a.get("severity") in ("Severe", "Extreme")
-                      and re.search("warning", a.get("event", ""), re.I) for a in data["alerts"])
+    warn_active = warning_active(data["alerts"])
     targets = list(cycle)
     with sync_playwright() as pw:
         browser = pw.chromium.launch()
@@ -274,8 +283,11 @@ def render_pages(data, cycle):
             raw.unlink()
             tmp.unlink(missing_ok=True)
         for pid in targets:
-            # pages render their normal selves; the warning takes over automatically if active
-            shoot(pid if not warn_active else None, f"page-{pid}.png")
+            shoot(pid, f"page-{pid}.png")
+        # The Warning is published as its own page only while one stands; the
+        # iPad viewer finds it by probing and puts it at the head of its loop.
+        if warn_active:
+            shoot("warning", "page-warning.png")
         # current.png: what the frame shows on a timed wake
         shoot(data["current"], "current.png")
         browser.close()

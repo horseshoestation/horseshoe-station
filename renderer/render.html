@@ -1225,7 +1225,9 @@ function renderForced(){
   $("suntimes").innerHTML='<b>&#9728;</b> '+(st.rise?fmtT(st.rise,{hour:"numeric",minute:"2-digit"}):"")+' &middot; '+(st.set?fmtT(st.set,{hour:"numeric",minute:"2-digit"}):"");
   $("statnote").textContent="TURNED "+fmtT(DATA.now,{hour:"numeric",minute:"2-digit"});
   $("statnote").className="stat-ok";
-  if(warn && FORCED_PAGE!=="__nowarn__"){
+  // The Warning is a page in the rotation, not a takeover: it is drawn only
+  // when asked for by name, and the other pages carry a small mark instead.
+  if(warn && FORCED_PAGE==="warning"){
     $("rulebox").classList.add("warned");
     $("orntitle").innerHTML="&#9888;&nbsp;&nbsp;THE WARNING&nbsp;&nbsp;&#9888;";
     $("content").innerHTML=pageWarning(warn);
@@ -1237,7 +1239,7 @@ function renderForced(){
   $("content").innerHTML=reg[id].fn();
   var order=DATA.cycle||["glass"], dots="";
   order.forEach(function(p){ dots+=(p===id?"&#9679; ":"&#9675; "); });
-  $("dots").innerHTML=dots.trim();
+  $("dots").innerHTML=(warn?"&#9888; ":"")+dots.trim();
 }
 function activePages(){
   var p=PAGES.slice();
